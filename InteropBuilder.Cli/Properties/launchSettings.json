@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "InteropBuilder.Cli": {
+      "commandName": "Project",
+      "commandLineArgs": "zzza"
+    }
+  }
+}
