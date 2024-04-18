@@ -30,7 +30,7 @@ namespace InteropBuilder.Cli
             Console.WriteLine();
             Console.WriteLine("Examples:");
             Console.WriteLine();
-            Console.WriteLine("    " + Assembly.GetEntryAssembly()!.GetName().Name!.ToUpperInvariant() + @" c:\mypath\myproject\myprojectInteropBuilder.dll");
+            Console.WriteLine("    " + Assembly.GetEntryAssembly()!.GetName().Name!.ToUpperInvariant() + @" c:\mypath\myproject\myprojectInteropBuilder.json");
             Console.WriteLine();
         }
     }
