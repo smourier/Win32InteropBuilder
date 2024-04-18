@@ -112,8 +112,9 @@ namespace Win32InteropBuilder
             ArgumentNullException.ThrowIfNull(context.MetadataReader);
 
             AddWellKnownTypes(context);
-            var matches = new HashSet<BuilderType>();
-            var reverses = new HashSet<BuilderType>();
+            var includes = new HashSet<BuilderType>();
+            var excludes = new HashSet<BuilderType>();
+            var includedByMembers = new HashSet<BuilderType>();
 
             foreach (var typeDef in context.MetadataReader.TypeDefinitions.Select(context.MetadataReader.GetTypeDefinition))
             {
@@ -127,15 +128,59 @@ namespace Win32InteropBuilder
                     context.AllTypes[type.FullName] = type;
                     context.TypeDefinitions[type.FullName] = typeDef;
 
+                    if (context.Configuration.MemberInputs.Count > 0)
+                    {
+                        foreach (var methodHandle in typeDef.GetMethods())
+                        {
+                            var methodDef = context.MetadataReader.GetMethodDefinition(methodHandle);
+                            var method = context.CreateBuilderMethod(context.MetadataReader.GetString(methodDef.Name));
+                            method.Handle = methodHandle;
+                            foreach (var match in context.Configuration.MemberInputs.Where(x => x.Matches(method)))
+                            {
+                                includedByMembers.Add(type);
+                                if (match.IsReverse)
+                                {
+                                    type.ExcludedMethods.Add(methodHandle);
+                                }
+                                else
+                                {
+                                    type.IncludedMethods.Add(methodHandle);
+                                }
+                            }
+                        }
+
+                        foreach (var fieldHandle in typeDef.GetFields())
+                        {
+                            var fieldDef = context.MetadataReader.GetFieldDefinition(fieldHandle);
+                            var field = context.CreateBuilderField(context.MetadataReader.GetString(fieldDef.Name));
+                            field.Handle = fieldHandle;
+                            foreach (var match in context.Configuration.MemberInputs.Where(x => x.Matches(field)))
+                            {
+                                includedByMembers.Add(type);
+                                if (match.IsReverse)
+                                {
+                                    type.ExcludedFields.Add(fieldHandle);
+                                }
+                                else
+                                {
+                                    type.IncludedFields.Add(fieldHandle);
+                                }
+                            }
+                        }
+                    }
+
                     foreach (var match in context.Configuration.TypeInputs.Where(x => x.Matches(type)))
                     {
+                        includedByMembers.Remove(type);
+                        type.IncludedFields.Clear();
+                        type.IncludedMethods.Clear();
                         if (match.IsReverse)
                         {
-                            reverses.Add(type);
+                            excludes.Add(type);
                         }
                         else
                         {
-                            matches.Add(type);
+                            includes.Add(type);
                         }
                     }
                 }
@@ -146,12 +191,21 @@ namespace Win32InteropBuilder
                 }
             }
 
-            foreach (var match in reverses.ToArray())
+            foreach (var match in excludes.ToArray())
             {
-                matches.Remove(match);
+                includes.Remove(match);
             }
 
-            foreach (var type in matches)
+            foreach (var type in includedByMembers)
+            {
+                // only really include if it has included methods or fields
+                if (type.IncludedMethods.Count > 0 || type.IncludedFields.Count > 0)
+                {
+                    includes.Add(type);
+                }
+            }
+
+            foreach (var type in includes)
             {
                 context.AddDependencies(type);
             }
@@ -258,7 +312,7 @@ namespace Win32InteropBuilder
                 // build pseudo-types
                 if (un.ConstantsFileName != null)
                 {
-                    var fields = context.ConstantsTypes.SelectMany(t => t.Fields).ToHashSet();
+                    var fields = context.ConstantsTypes.SelectMany(t => t.GeneratedFields).ToHashSet();
                     var constantsType = context.CreateBuilderType(new FullName(un.Namespace!, un.ConstantsFileName));
                     constantsType.TypeAttributes |= TypeAttributes.Abstract | TypeAttributes.Sealed; // static
                     constantsType.Fields.AddRange(fields);
@@ -271,7 +325,7 @@ namespace Win32InteropBuilder
 
                 if (un.FunctionsFileName != null)
                 {
-                    var functions = context.FunctionsTypes.SelectMany(t => t.Methods).ToHashSet();
+                    var functions = context.FunctionsTypes.SelectMany(t => t.GeneratedMethods).ToHashSet();
                     var functionsType = context.CreateBuilderType(new FullName(un.Namespace!, un.FunctionsFileName));
                     functionsType.TypeAttributes |= TypeAttributes.Abstract | TypeAttributes.Sealed; // static
                     functionsType.Methods.AddRange(functions);

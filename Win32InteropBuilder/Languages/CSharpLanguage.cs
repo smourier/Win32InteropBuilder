@@ -160,6 +160,9 @@ namespace Win32InteropBuilder.Languages
                 for (var i = 0; i < type.Fields.Count; i++)
                 {
                     var field = type.Fields[i];
+                    if (field.Type == null)
+                        throw new InvalidOperationException();
+
                     if (field.Documentation != null)
                     {
                         context.CurrentWriter.WriteLine("// " + field.Documentation);
@@ -183,6 +186,16 @@ namespace Win32InteropBuilder.Languages
                 for (var i = 0; i < type.Methods.Count; i++)
                 {
                     var method = type.Methods[i];
+
+                    if (method.Handle.HasValue)
+                    {
+                        if (type.ExcludedMethods.Contains(method.Handle.Value))
+                            continue;
+
+                        if (type.IncludedMethods.Count > 0 && !type.IncludedMethods.Contains(method.Handle.Value))
+                            continue;
+                    }
+
                     GenerateCode(context, method);
                     if (i != type.Methods.Count - 1)
                     {
@@ -248,6 +261,9 @@ namespace Win32InteropBuilder.Languages
                 for (var i = 0; i < type.Fields.Count; i++)
                 {
                     var field = type.Fields[i];
+                    if (field.Type == null)
+                        throw new InvalidOperationException();
+
                     var mapped = context.MapType(field.Type);
 
                     var addSep = mapped.UnmanagedType.HasValue || field.Offset.HasValue;

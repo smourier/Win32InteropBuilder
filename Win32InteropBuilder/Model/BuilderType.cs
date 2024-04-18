@@ -17,6 +17,10 @@ namespace Win32InteropBuilder.Model
         private readonly List<BuilderField> _fields = [];
         private readonly List<BuilderType> _interfaces = [];
         private readonly List<BuilderType> _nestedTypes = [];
+        private readonly HashSet<MethodDefinitionHandle> _includedMethods = [];
+        private readonly HashSet<MethodDefinitionHandle> _excludedMethods = [];
+        private readonly HashSet<FieldDefinitionHandle> _includedFields = [];
+        private readonly HashSet<FieldDefinitionHandle> _excludedFields = [];
 
         public BuilderType(FullName fullName)
         {
@@ -44,6 +48,10 @@ namespace Win32InteropBuilder.Model
         public virtual IList<BuilderField> Fields => _fields;
         public virtual IList<BuilderType> Interfaces => _interfaces;
         public virtual IList<BuilderType> NestedTypes => _nestedTypes;
+        public virtual ISet<MethodDefinitionHandle> IncludedMethods => _includedMethods; // if empty => all methods
+        public virtual ISet<MethodDefinitionHandle> ExcludedMethods => _excludedMethods;
+        public virtual ISet<FieldDefinitionHandle> IncludedFields => _includedFields; // if empty => all fields
+        public virtual ISet<FieldDefinitionHandle> ExcludedFields => _excludedFields;
         public virtual string? Documentation { get; set; }
         public virtual string? SupportedOSPlatform { get; set; }
         public virtual Guid? Guid { get; set; }
@@ -52,6 +60,68 @@ namespace Win32InteropBuilder.Model
         public virtual PrimitiveTypeCode PrimitiveTypeCode { get; set; } = PrimitiveTypeCode.Object;
 
         public virtual bool IsConstableType() => FullName.IsConstableType(FullName);
+
+        public virtual IEnumerable<BuilderMethod> GeneratedMethods
+        {
+            get
+            {
+                if (IncludedMethods.Count == 0 && ExcludedMethods.Count == 0)
+                {
+                    foreach (var method in Methods)
+                    {
+                        yield return method;
+                    }
+                    yield break;
+                }
+
+                foreach (var method in Methods)
+                {
+                    if (!method.Handle.HasValue)
+                    {
+                        yield return method;
+                    }
+                    else
+                    {
+                        if (ExcludedMethods.Contains(method.Handle.Value))
+                            continue;
+
+                        if (IncludedMethods.Count == 0 || IncludedMethods.Contains(method.Handle.Value))
+                            yield return method;
+                    }
+                }
+            }
+        }
+
+        public virtual IEnumerable<BuilderField> GeneratedFields
+        {
+            get
+            {
+                if (IncludedFields.Count == 0 && ExcludedFields.Count == 0)
+                {
+                    foreach (var field in Fields)
+                    {
+                        yield return field;
+                    }
+                    yield break;
+                }
+
+                foreach (var field in Fields)
+                {
+                    if (!field.Handle.HasValue)
+                    {
+                        yield return field;
+                    }
+                    else
+                    {
+                        if (ExcludedFields.Contains(field.Handle.Value))
+                            continue;
+
+                        if (IncludedFields.Count == 0 || IncludedFields.Contains(field.Handle.Value))
+                            yield return field;
+                    }
+                }
+            }
+        }
 
         public virtual void ResolveType(BuilderContext context, TypeDefinition typeDef)
         {
@@ -135,6 +205,7 @@ namespace Win32InteropBuilder.Model
             {
                 var methodDef = context.MetadataReader.GetMethodDefinition(handle);
                 var method = context.CreateBuilderMethod(context.MetadataReader.GetString(methodDef.Name));
+                method.Handle = handle;
                 method.Attributes = methodDef.Attributes;
                 method.ImplAttributes = methodDef.ImplAttributes;
                 method.IsAnsi = context.MetadataReader.IsAnsi(methodDef.GetCustomAttributes());
@@ -222,7 +293,9 @@ namespace Win32InteropBuilder.Model
             {
                 var fieldDef = context.MetadataReader.GetFieldDefinition(handle);
                 var name = context.MetadataReader.GetString(fieldDef.Name);
-                var field = context.CreateBuilderField(name, fieldDef.DecodeSignature(context.SignatureTypeProvider, null));
+                var field = context.CreateBuilderField(name);
+                field.Handle = handle;
+                field.Type = fieldDef.DecodeSignature(context.SignatureTypeProvider, null);
                 field.Attributes = fieldDef.Attributes;
                 field.DefaultValueAsBytes = context.MetadataReader.GetConstantBytes(fieldDef.GetDefaultValue());
 

@@ -63,6 +63,7 @@ namespace Win32InteropBuilder.Model
                 if (nestedType != null)
                     return nestedType;
             }
+
             throw new EnumBasedException<Win32InteropBuilderExceptionCode>(Win32InteropBuilderExceptionCode.CantResolveType, $"Full name: {fn}");
         }
 

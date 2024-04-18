@@ -2,9 +2,9 @@
 
 namespace Win32InteropBuilder.Model
 {
-    public class BuildMember : IDocumentable, ISupportable
+    public class BuilderMember : IDocumentable, ISupportable
     {
-        public BuildMember(string name)
+        public BuilderMember(string name)
         {
             ArgumentNullException.ThrowIfNull(name);
             Name = name;

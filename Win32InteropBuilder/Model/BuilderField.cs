@@ -1,25 +1,22 @@
 ﻿using System;
 using System.Reflection;
+using System.Reflection.Metadata;
 
 namespace Win32InteropBuilder.Model
 {
-    public class BuilderField : IDocumentable, IComparable, IComparable<BuilderField>
+    public class BuilderField : BuilderMember, IComparable, IComparable<BuilderField>
     {
-        public BuilderField(string name, BuilderType type)
+        public BuilderField(string name)
+            : base(name)
         {
-            ArgumentNullException.ThrowIfNull(name);
-            ArgumentNullException.ThrowIfNull(type);
-            Name = name;
-            Type = type;
         }
 
-        public string Name { get; }
-        public BuilderType Type { get; }
+        public virtual BuilderType? Type { get; set; }
+        public virtual FieldDefinitionHandle? Handle { get; set; }
         public virtual FieldAttributes Attributes { get; set; }
         public virtual int? Offset { get; set; }
         public virtual byte[]? DefaultValueAsBytes { get; set; }
-        public virtual string? Documentation { get; set; }
-        public object? DefaultValue => Type.GetValue(DefaultValueAsBytes);
+        public object? DefaultValue => Type?.GetValue(DefaultValueAsBytes);
 
         int IComparable.CompareTo(object? obj) => CompareTo(obj as BuilderField);
         public int CompareTo(BuilderField? other)

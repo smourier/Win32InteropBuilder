@@ -51,7 +51,7 @@ namespace Win32InteropBuilder
         public virtual DelegateType CreateDelegateType(FullName fullName) => new(fullName);
         public virtual BuilderMethod CreateBuilderMethod(string name) => new(name);
         public virtual BuilderParameter CreateBuilderParameter(string name, int sequenceNumber) => new(name, sequenceNumber);
-        public virtual BuilderField CreateBuilderField(string name, BuilderType type) => new(name, type);
+        public virtual BuilderField CreateBuilderField(string name) => new(name);
         public virtual BuilderType CreateInlineArrayType(BuilderType elementType, int size) => new InlineArrayType(elementType, size);
 
         public virtual FullName GetFullName(TypeDefinition typeDef)

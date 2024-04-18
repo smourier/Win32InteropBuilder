@@ -6,11 +6,23 @@ using Win32InteropBuilder.Model;
 namespace Win32InteropBuilder
 {
     [JsonConverter(typeof(Converter))]
-    public class BuilderMemberInput(string input) : BuilderInput<BuildMember>(input)
+    public class BuilderMemberInput(string input) : BuilderInput<BuilderMember>(input)
     {
-        public override bool Matches(BuildMember type)
+        public override bool Matches(BuilderMember member)
         {
-            throw new NotImplementedException();
+            ArgumentNullException.ThrowIfNull(member);
+            if (string.IsNullOrEmpty(Input) && IsWildcard)
+                return true;
+
+            if (member.Name == Input)
+                return true;
+
+            if (IsWildcard)
+            {
+                if (member.Name.StartsWith(Input, StringComparison.CurrentCultureIgnoreCase))
+                    return true;
+            }
+            return false;
         }
 
         private sealed class Converter : JsonConverter<BuilderMemberInput>
