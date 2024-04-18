@@ -405,7 +405,9 @@ namespace Win32InteropBuilder
                         }
 
                         if (indices.All(i => i == 0))
-                            throw new InvalidOperationException();
+                        {
+                            dedup = true;
+                        }
                     }
                     while (!dedup);
                 }

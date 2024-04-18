@@ -144,7 +144,7 @@ namespace Win32InteropBuilder.Model
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(context.MetadataReader);
 
-            Guid = context.GetInteropGuid(typeDef.GetCustomAttributes());
+            Guid = context.GetMetadataGuid(typeDef.GetCustomAttributes());
             TypeAttributes = typeDef.Attributes;
             IsNested = typeDef.IsNested;
             context.TypesToBuild.Add(this);
@@ -323,13 +323,25 @@ namespace Win32InteropBuilder.Model
                     field.Offset = offset;
                 }
 
-                // bit of a hack for guids
-                if (field.DefaultValueAsBytes == null && field.Type.FullName == WellKnownTypes.SystemGuid.FullName)
+                if (field.DefaultValueAsBytes == null)
                 {
-                    var guid = context.GetInteropGuid(fieldDef.GetCustomAttributes());
-                    if (guid.HasValue)
+                    // bit of a hack for guids
+                    if (field.Type.FullName == WellKnownTypes.SystemGuid.FullName)
                     {
-                        field.DefaultValueAsBytes = guid.Value.ToByteArray();
+                        var guid = context.GetMetadataGuid(fieldDef.GetCustomAttributes());
+                        if (guid.HasValue)
+                        {
+                            field.DefaultValueAsBytes = guid.Value.ToByteArray();
+                        }
+                    }
+
+                    if (field.DefaultValueAsBytes == null)
+                    {
+                        var ct = context.GetMetadataConstant(fieldDef.GetCustomAttributes());
+                        if (ct != null)
+                        {
+                            field.DefaultValue = new Constant(ct);
+                        }
                     }
                 }
 
@@ -527,10 +539,10 @@ namespace Win32InteropBuilder.Model
                 return BitConverter.ToDouble(bytes, 0);
 
             if (FullName == WellKnownTypes.SystemString.FullName)
-            {
-                var str = Encoding.Unicode.GetString(bytes);
-                return str;
-            }
+                return Encoding.Unicode.GetString(bytes);
+
+            if (FullName == WellKnownTypes.SystemChar.FullName)
+                return BitConverter.ToChar(bytes, 0);
 
             // we currently presume all enums are Int32...
             if (bytes.Length == 4 && this is EnumType)
@@ -548,7 +560,8 @@ namespace Win32InteropBuilder.Model
                     return enumType.UnderlyingType.GetValue(bytes);
             }
 
-            throw new NotSupportedException($"Bytes length {bytes.Length} for type '{FullName}'.");
+            //throw new NotSupportedException($"Bytes length {bytes.Length} for type '{FullName}'.");
+            return bytes;
         }
 
         public override int GetHashCode() => FullName.GetHashCode();

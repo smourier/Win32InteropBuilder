@@ -23,8 +23,9 @@ namespace Win32InteropBuilder.Languages
             Configuration = element.Deserialize<CSharpLanguageConfiguration>(Builder.JsonSerializerOptions) ?? new();
         }
 
-        public virtual string GetValueAsString(BuilderType type, object? value)
+        public virtual string GetValueAsString(BuilderContext context, BuilderType type, object? value)
         {
+            ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(type);
             if (value == null)
                 return "null";
@@ -37,6 +38,15 @@ namespace Win32InteropBuilder.Languages
 
             if (value is string s)
                 return $"@\"{s.Replace("\"", "\"\"")}\"";
+
+            if (value is char c)
+                return $"'\\u{(ushort)c:x4}'";
+
+            if (value is byte[] bytes)
+                return $"[{string.Join(", ", bytes)}]";
+
+            if (value is Constant ct)
+                return context.GetConstantValue(type, ct);
 
             if (type.ClrType != null)
             {
@@ -184,7 +194,7 @@ namespace Win32InteropBuilder.Languages
                     }
 
                     var constText = field.Attributes.HasFlag(FieldAttributes.Literal) && field.Type.IsConstableType() ? "const" : "static readonly";
-                    context.CurrentWriter.WriteLine($"public {constText} {GetTypeReferenceName(mapped.GetGeneratedName(context))} {GetIdentifier(field.Name)} = {GetValueAsString(field.Type, field.DefaultValue)};");
+                    context.CurrentWriter.WriteLine($"public {constText} {GetTypeReferenceName(mapped.GetGeneratedName(context))} {GetIdentifier(field.Name)} = {GetValueAsString(context, field.Type, field.DefaultValue)};");
 
                     if (i != type.Fields.Count - 1 || type.Methods.Count > 0)
                     {
@@ -464,10 +474,10 @@ namespace Win32InteropBuilder.Languages
                     var field = type.Fields[i];
                     context.CurrentWriter.Write(GetIdentifier(field.Name));
 
-                    if (field.DefaultValueAsBytes != null)
+                    if (field.DefaultValue != null)
                     {
                         context.CurrentWriter.Write(" = ");
-                        context.CurrentWriter.Write(GetValueAsString(type.UnderlyingType ?? WellKnownTypes.SystemInt32, field.DefaultValue));
+                        context.CurrentWriter.Write(GetValueAsString(context, type.UnderlyingType ?? WellKnownTypes.SystemInt32, field.DefaultValue));
                     }
                     context.CurrentWriter.WriteLine(',');
                 }

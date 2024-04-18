@@ -150,6 +150,13 @@ namespace Win32InteropBuilder
             return fullName;
         }
 
+        public virtual string GetConstantValue(BuilderType type, Model.Constant constant)
+        {
+            ArgumentNullException.ThrowIfNull(type);
+            ArgumentNullException.ThrowIfNull(constant);
+            return constant.ValueAsText;
+        }
+
         public void LogInfo(object? message = null, [CallerMemberName] string? methodName = null) => Log(TraceLevel.Info, message, methodName);
         public void LogWarning(object? message = null, [CallerMemberName] string? methodName = null) => Log(TraceLevel.Warning, message, methodName);
         public void LogError(object? message = null, [CallerMemberName] string? methodName = null) => Log(TraceLevel.Error, message, methodName);

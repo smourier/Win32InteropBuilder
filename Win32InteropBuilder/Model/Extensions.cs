@@ -180,7 +180,24 @@ namespace Win32InteropBuilder.Model
             return reader.GetBlobBytes(constant.Value);
         }
 
-        public static Guid? GetInteropGuid(this BuilderContext context, CustomAttributeHandleCollection handles)
+        public static string? GetMetadataConstant(this BuilderContext context, CustomAttributeHandleCollection handles)
+        {
+            ArgumentNullException.ThrowIfNull(context);
+            ArgumentNullException.ThrowIfNull(context.MetadataReader);
+            var handle = handles.FirstOrDefault(h => context.MetadataReader.GetFullName(context.MetadataReader.GetCustomAttribute(h)) == FullName.ConstantAttribute);
+            if (handle.IsNil)
+                return null;
+
+            var value = GetValue(context, context.MetadataReader.GetCustomAttribute(handle));
+            if (value.FixedArguments.Length == 1 &&
+                value.FixedArguments[0].Value != null &&
+                value.FixedArguments[0].Value is string s)
+                return s;
+
+            return null;
+        }
+
+        public static Guid? GetMetadataGuid(this BuilderContext context, CustomAttributeHandleCollection handles)
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(context.MetadataReader);
