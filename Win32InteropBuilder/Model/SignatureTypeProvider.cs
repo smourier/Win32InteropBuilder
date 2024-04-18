@@ -21,6 +21,7 @@ namespace Win32InteropBuilder.Model
             ArgumentNullException.ThrowIfNull(elementType);
             if (shape.Rank == 1 && shape.Sizes.Length == 1)
             {
+                Context.AddDependencies(elementType);
                 var arrayType = Context.CreateInlineArrayType(elementType, shape.Sizes[0]);
                 Context.TypesToBuild.Add(arrayType);
                 return arrayType;

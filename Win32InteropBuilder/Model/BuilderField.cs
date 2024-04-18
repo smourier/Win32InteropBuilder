@@ -4,16 +4,12 @@ using System.Reflection.Metadata;
 
 namespace Win32InteropBuilder.Model
 {
-    public class BuilderField : BuilderMember, IComparable, IComparable<BuilderField>
+    public class BuilderField(string name) : BuilderMember(name), IComparable, IComparable<BuilderField>
     {
-        public BuilderField(string name)
-            : base(name)
-        {
-        }
-
         public virtual BuilderType? Type { get; set; }
         public virtual FieldDefinitionHandle? Handle { get; set; }
         public virtual FieldAttributes Attributes { get; set; }
+        public virtual bool IsFlexibleArray { get; set; }
         public virtual int? Offset { get; set; }
         public virtual byte[]? DefaultValueAsBytes { get; set; }
         public object? DefaultValue => Type?.GetValue(DefaultValueAsBytes);

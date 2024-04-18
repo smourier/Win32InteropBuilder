@@ -43,7 +43,16 @@ namespace Win32InteropBuilder.Languages
                 value = Conversions.ChangeType(value, type.ClrType, value, CultureInfo.InvariantCulture);
             }
 
-            return string.Format(CultureInfo.InvariantCulture, "{0}", value);
+            var str = string.Format(CultureInfo.InvariantCulture, "{0}", value);
+            if (value is float)
+                return str + "f";
+
+            if (value is double)
+                return str + "d";
+
+            if (value is decimal)
+                return str + "m";
+            return str;
         }
 
         [return: NotNullIfNotNull(nameof(name))]
@@ -186,7 +195,6 @@ namespace Win32InteropBuilder.Languages
                 for (var i = 0; i < type.Methods.Count; i++)
                 {
                     var method = type.Methods[i];
-
                     if (method.Handle.HasValue)
                     {
                         if (type.ExcludedMethods.Contains(method.Handle.Value))
@@ -284,7 +292,7 @@ namespace Win32InteropBuilder.Languages
 
                     if (mapped is InterfaceType || mapped is DelegateType)
                     {
-                        context.CurrentWriter.WriteLine($"public nint {GetIdentifier(field.Name)};");
+                        context.CurrentWriter.Write($"public nint {GetIdentifier(field.Name)};");
                     }
                     else
                     {
@@ -293,8 +301,14 @@ namespace Win32InteropBuilder.Languages
                         {
                             typeName = "nint";
                         }
-                        context.CurrentWriter.WriteLine($"public {typeName} {GetIdentifier(field.Name)};");
+                        context.CurrentWriter.Write($"public {typeName} {GetIdentifier(field.Name)};");
                     }
+
+                    if (field.IsFlexibleArray)
+                    {
+                        context.CurrentWriter.Write(" // variable-length array placeholder");
+                    }
+                    context.CurrentWriter.WriteLine();
                 }
             });
         }
@@ -326,7 +340,7 @@ namespace Win32InteropBuilder.Languages
                     typeName = "void";
                 }
 
-                context.CurrentWriter.Write($"public delegate {GetTypeReferenceName(typeName)} {GetIdentifier(method.Name)}(");
+                context.CurrentWriter.Write($"public delegate {GetTypeReferenceName(typeName)} {GetIdentifier(type.FullName.Name)}(");
                 for (var j = 0; j < method.Parameters.Count; j++)
                 {
                     var parameter = method.Parameters[j];
@@ -390,7 +404,7 @@ namespace Win32InteropBuilder.Languages
 
             if (type.Interfaces.Count > 0)
             {
-                context.CurrentWriter.Write($" : {string.Join(", ", type.Interfaces.Select(i => GetIdentifier(i.FullName.GetRelativeTo(type.FullName))))}");
+                context.CurrentWriter.Write($" : {string.Join(", ", type.Interfaces.Select(i => GetIdentifier(i.GetGeneratedName(context))))}");
             }
 
             context.CurrentWriter.WriteLine();
@@ -399,34 +413,7 @@ namespace Win32InteropBuilder.Languages
                 for (var i = 0; i < type.Methods.Count; i++)
                 {
                     var method = type.Methods[i];
-                    context.CurrentWriter.WriteLine("[PreserveSig]");
-                    string typeName;
-                    if (method.ReturnType != null && method.ReturnType != WellKnownTypes.SystemVoid)
-                    {
-                        var mapped = context.MapType(method.ReturnType);
-                        if (mapped.UnmanagedType.HasValue)
-                        {
-                            context.CurrentWriter.WriteLine($"[return: MarshalAs(UnmanagedType.{mapped.UnmanagedType.Value})]");
-                        }
-                        typeName = GetTypeReferenceName(mapped.GetGeneratedName(context));
-                    }
-                    else
-                    {
-                        typeName = "void";
-                    }
-
-                    context.CurrentWriter.Write($"{GetTypeReferenceName(typeName)} {GetIdentifier(method.Name)}(");
-                    for (var j = 0; j < method.Parameters.Count; j++)
-                    {
-                        var parameter = method.Parameters[j];
-                        GenerateCode(context, parameter);
-                        if (j != method.Parameters.Count - 1)
-                        {
-                            context.CurrentWriter.Write(", ");
-                        }
-                    }
-                    context.CurrentWriter.WriteLine(");");
-
+                    GenerateCode(context, method);
                     if (i != type.Methods.Count - 1)
                     {
                         context.CurrentWriter.WriteLine();
@@ -514,17 +501,30 @@ namespace Win32InteropBuilder.Languages
 
             context.CurrentWriter.WriteLine("[PreserveSig]");
             string typeName;
-            if (method.ReturnType != null)
+            if (method.ReturnType != null && method.ReturnType != WellKnownTypes.SystemVoid)
             {
                 var mapped = context.MapType(method.ReturnType);
-                typeName = mapped.GetGeneratedName(context);
+                if (mapped.UnmanagedType.HasValue)
+                {
+                    if (!method.Attributes.HasFlag(MethodAttributes.Static) || mapped == WellKnownTypes.SystemBoolean)
+                    {
+                        context.CurrentWriter.WriteLine($"[return: MarshalAs(UnmanagedType.{mapped.UnmanagedType.Value})]");
+                    }
+                }
+                typeName = GetTypeReferenceName(mapped.GetGeneratedName(context));
             }
             else
             {
                 typeName = "void";
             }
 
-            context.CurrentWriter.Write($"public static partial {GetTypeReferenceName(typeName)} {GetIdentifier(method.Name)}(");
+            string? staticText = null;
+            if (method.Attributes.HasFlag(MethodAttributes.Static))
+            {
+                staticText = "static partial ";
+            }
+
+            context.CurrentWriter.Write($"public {staticText}{GetTypeReferenceName(typeName)} {GetIdentifier(method.Name)}(");
             for (var j = 0; j < method.Parameters.Count; j++)
             {
                 var parameter = method.Parameters[j];
@@ -546,41 +546,84 @@ namespace Win32InteropBuilder.Languages
                 throw new InvalidOperationException();
 
             var mapped = context.MapType(parameter.Type);
+            var typeName = GetTypeReferenceName(mapped.GetGeneratedName(context));
+
+            string? marshalAs = null;
             if (parameter.UnmanagedType.HasValue)
             {
-                context.CurrentWriter.Write($"[MarshalAs(UnmanagedType.{parameter.UnmanagedType.Value})]");
+                marshalAs = parameter.UnmanagedType.Value.ToString();
             }
             else if (mapped.UnmanagedType.HasValue)
             {
-                context.CurrentWriter.Write($"[MarshalAs(UnmanagedType.{mapped.UnmanagedType.Value})]");
+                marshalAs = mapped.UnmanagedType.Value.ToString();
             }
 
-
-            if (parameter.Attributes.HasFlag(ParameterAttributes.Out))
+            string? direction = null;
+            if (typeName == "byte" && parameter.Type.Indirections > 0)
             {
-                if (parameter.Attributes.HasFlag(ParameterAttributes.In))
+                typeName = "nint /* byte array */";
+                marshalAs = null;
+                if (parameter.Type.Indirections > 1)
                 {
-                    context.CurrentWriter.Write("ref ");
+                    direction = "out";
+                }
+            }
+            else
+            {
+                var optionalPtr = parameter.Attributes.HasFlag(ParameterAttributes.Optional) & parameter.Type.Indirections > 0;
+                if (optionalPtr)
+                {
+                    typeName = $"nint /* {typeName} */";
+                    marshalAs = null;
                 }
                 else
                 {
-                    context.CurrentWriter.Write("out ");
+                    if (parameter.Attributes.HasFlag(ParameterAttributes.Out))
+                    {
+                        if (parameter.Attributes.HasFlag(ParameterAttributes.In))
+                        {
+                            direction = "ref";
+                        }
+                        else
+                        {
+                            direction = "out";
+                        }
+                    }
+                    else if (mapped.Indirections > 0 && typeName != "nint")
+                    {
+                        direction = "in";
+                    }
+
+                    if (typeName == "void" && mapped.Indirections > 0)
+                    {
+                        typeName = "nint";
+                        marshalAs = null;
+                        if (mapped.Indirections == 1)
+                        {
+                            direction = null;
+                        }
+                        else
+                        {
+                            direction = "out";
+                        }
+                    }
                 }
             }
-            else if (mapped.Indirections > 0)
+
+            if (direction == "out" && typeName == "nint")
             {
-                context.CurrentWriter.Write("in ");
             }
 
-            var tn = GetTypeReferenceName(mapped.GetGeneratedName(context));
-            if (tn == "void" && mapped.Indirections > 0)
+            if (marshalAs != null)
             {
-                tn = "nint";
+                marshalAs = $"[MarshalAs(UnmanagedType.{marshalAs})] ";
             }
 
-            context.CurrentWriter.Write(tn);
-            context.CurrentWriter.Write(' ');
-            context.CurrentWriter.Write(GetIdentifier(parameter.Name));
+            if (direction != null)
+            {
+                direction += " ";
+            }
+            context.CurrentWriter.Write($"{marshalAs}{direction}{typeName} {GetIdentifier(parameter.Name)}");
         }
 
         private static readonly ConcurrentDictionary<string, string> _typeKeywords = new()

@@ -258,24 +258,17 @@ namespace Win32InteropBuilder.Model
             return bfn == FullName.SystemEnum;
         }
 
-        //public static bool IsOut(this MetadataReader reader, CustomAttributeHandleCollection handles)
-        //{
-        //    ArgumentNullException.ThrowIfNull(reader);
-        //    var handle = handles.FirstOrDefault(h => reader.GetFullName(reader.GetCustomAttribute(h)) == FullName.OutAttribute);
-        //    return !handle.IsNil;
-        //}
-
-        //public static bool IsIn(this MetadataReader reader, CustomAttributeHandleCollection handles)
-        //{
-        //    ArgumentNullException.ThrowIfNull(reader);
-        //    var handle = handles.FirstOrDefault(h => reader.GetFullName(reader.GetCustomAttribute(h)) == FullName.InAttribute);
-        //    return !handle.IsNil;
-        //}
-
         public static bool IsComOutPtr(this MetadataReader reader, CustomAttributeHandleCollection handles)
         {
             ArgumentNullException.ThrowIfNull(reader);
             var handle = handles.FirstOrDefault(h => reader.GetFullName(reader.GetCustomAttribute(h)) == FullName.ComOutPtrAttribute);
+            return !handle.IsNil;
+        }
+
+        public static bool IsFlexibleArray(this MetadataReader reader, CustomAttributeHandleCollection handles)
+        {
+            ArgumentNullException.ThrowIfNull(reader);
+            var handle = handles.FirstOrDefault(h => reader.GetFullName(reader.GetCustomAttribute(h)) == FullName.FlexibleArrayAttribute);
             return !handle.IsNil;
         }
 

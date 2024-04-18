@@ -237,7 +237,6 @@ namespace Win32InteropBuilder.Model
                     parameter.Attributes = parameterDef.Attributes;
                     parameter.IsComOutPtr = context.MetadataReader.IsComOutPtr(parameterDef.GetCustomAttributes());
                     parameter.IsConst = context.MetadataReader.IsConst(parameterDef.GetCustomAttributes());
-
                     method.Parameters.Add(parameter);
                 }
                 method.SortParameters();
@@ -298,6 +297,7 @@ namespace Win32InteropBuilder.Model
                 field.Type = fieldDef.DecodeSignature(context.SignatureTypeProvider, null);
                 field.Attributes = fieldDef.Attributes;
                 field.DefaultValueAsBytes = context.MetadataReader.GetConstantBytes(fieldDef.GetDefaultValue());
+                field.IsFlexibleArray = context.MetadataReader.IsFlexibleArray(fieldDef.GetCustomAttributes());
 
                 var offset = fieldDef.GetOffset();
                 if (offset >= 0)
@@ -513,6 +513,9 @@ namespace Win32InteropBuilder.Model
             if (bytes.Length == 4 && FullName == WellKnownTypes.SystemUInt32.FullName)
                 return BitConverter.ToUInt32(bytes, 0);
 
+            if (bytes.Length == 4 && FullName == WellKnownTypes.SystemSingle.FullName)
+                return BitConverter.ToSingle(bytes, 0);
+
             if (bytes.Length == 2 && FullName == WellKnownTypes.SystemInt16.FullName)
                 return BitConverter.ToInt16(bytes, 0);
 
@@ -525,6 +528,9 @@ namespace Win32InteropBuilder.Model
             if (bytes.Length == 8 && FullName == WellKnownTypes.SystemUInt64.FullName)
                 return BitConverter.ToUInt64(bytes, 0);
 
+            if (bytes.Length == 8 && FullName == WellKnownTypes.SystemDouble.FullName)
+                return BitConverter.ToDouble(bytes, 0);
+
             // we currently presume all enums are Int32...
             if (bytes.Length == 4 && this is EnumType)
                 return BitConverter.ToInt32(bytes, 0);
@@ -533,7 +539,7 @@ namespace Win32InteropBuilder.Model
                 return new Guid(bytes);
 
             if (this is StructureType structureType && structureType.Fields.Count == 1)
-                return structureType.Fields[0].Type.GetValue(bytes);
+                return structureType.Fields[0].Type?.GetValue(bytes);
 
             if (this is EnumType enumType)
             {
