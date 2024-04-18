@@ -122,6 +122,7 @@ namespace Win32InteropBuilder
                 if (type == null)
                     continue;
 
+                type.IsNested = typeDef.IsNested;
                 context.CurrentTypes.Push(type);
                 try
                 {
@@ -284,6 +285,132 @@ namespace Win32InteropBuilder
             }
 
             AddMappedTypes(context);
+
+            // first pass to compute duplicate file names if unified namespaces
+            var un = context.Configuration.GetUnifiedGeneration();
+            if (un != null)
+            {
+                var duplicateFiles = new Dictionary<string, List<BuilderType>>(StringComparer.OrdinalIgnoreCase);
+                foreach (var type in context.TypesToBuild.OrderBy(t => t.FullName))
+                {
+                    var finalType = type;
+                    if (context.MappedTypes.TryGetValue(type.FullName, out var mappedType))
+                    {
+                        finalType = mappedType;
+                    }
+                    if (!finalType.IsGenerated)
+                        continue;
+
+                    if (finalType.GetType() == typeof(BuilderType))
+                    {
+                        // base type handling only (including constants & functions)
+                        var ico = isConstants();
+                        var ifu = isFunctions();
+                        if (!ico && !ifu)
+                        {
+                            if (un.ConstantsFileName != null)
+                            {
+                                context.ConstantsTypes.Add(finalType);
+                            }
+
+                            if (un.FunctionsFileName != null)
+                            {
+                                context.FunctionsTypes.Add(finalType);
+                            }
+
+                            // nothing to do here?
+                            if (un.ConstantsFileName != null && un.FunctionsFileName != null)
+                            {
+                                finalType.IsGenerated = false;
+                                continue;
+                            }
+                        }
+
+                        bool isConstants() => finalType.FullName.Namespace == un.Namespace && finalType.FullName.Name == un.ConstantsFileName;
+                        bool isFunctions() => finalType.FullName.Namespace == un.Namespace && finalType.FullName.Name == un.FunctionsFileName;
+                    }
+
+                    var ns = context.MapGeneratedFullName(finalType.FullName).Namespace.Replace('.', Path.DirectorySeparatorChar);
+                    var fileName = finalType.FileName + context.Language.FileExtension;
+                    var typePath = Path.Combine(context.Configuration.OutputDirectoryPath, ns, fileName);
+
+                    if (!duplicateFiles.TryGetValue(typePath, out var list))
+                    {
+                        list = [];
+                        duplicateFiles[typePath] = list;
+                    }
+
+                    duplicateFiles[typePath].Add(finalType);
+                }
+
+                foreach (var kv in duplicateFiles.Where(k => k.Value.Count > 1))
+                {
+                    var list = kv.Value;
+                    var names = new string[list.Count];
+                    var indices = new int[list.Count];
+                    var fns = new string[list.Count];
+                    for (var i = 0; i < list.Count; i++)
+                    {
+                        if (list[i] is InlineArrayType inlineArray)
+                        {
+                            fns[i] = inlineArray.ElementType.FullName.ToString();
+                        }
+                        else
+                        {
+                            fns[i] = list[i].FullName.ToString();
+                        }
+                        indices[i] = fns[i].Length - 1;
+                    }
+
+                    var dedup = false;
+                    do
+                    {
+                        for (var i = 0; i < list.Count; i++)
+                        {
+                            var pos = fns[i].LastIndexOf('.', indices[i]);
+                            if (pos < 0)
+                            {
+                                indices[i] = 0;
+                                names[i] = fns[i];
+                            }
+                            else
+                            {
+                                indices[i] = pos - 1;
+                                names[i] = fns[i][(pos + 1)..];
+                            }
+                        }
+
+                        var uniques = new HashSet<string>(names, StringComparer.OrdinalIgnoreCase);
+                        if (uniques.Count == names.Length &&
+                            uniques.All(s => !duplicateFiles.TryGetValue(s, out var dups) || dups.Count == 1))
+                        {
+                            for (var i = 0; i < names.Length; i++)
+                            {
+                                FullName fn;
+                                if (list[i] is InlineArrayType inlineArray)
+                                {
+                                    fn = InlineArrayType.BuildFullName(inlineArray.ElementType, inlineArray.Size, names[i].Replace(".", string.Empty));
+                                }
+                                else
+                                {
+                                    fn = new FullName(list[i].FullName.Namespace, names[i].Replace(".", string.Empty));
+                                }
+
+                                var clone = list[i].Clone(context, fn);
+                                context.MappedTypes[list[i].FullName] = clone;
+                            }
+
+                            dedup = true;
+                            break;
+                        }
+
+                        if (indices.All(i => i == 0))
+                            throw new InvalidOperationException();
+                    }
+                    while (!dedup);
+                }
+            }
+
             foreach (var type in context.TypesToBuild.OrderBy(t => t.FullName))
             {
                 var finalType = type;
@@ -306,7 +433,6 @@ namespace Win32InteropBuilder
                 IOUtilities.DirectoryDeleteEmptySubDirectories(context.Configuration.OutputDirectoryPath);
             }
 
-            var un = context.Configuration.GetGeneration();
             if (un != null)
             {
                 // build pseudo-types

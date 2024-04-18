@@ -5,6 +5,7 @@ using System.IO;
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
+using System.Text;
 using Win32InteropBuilder.Utilities;
 
 namespace Win32InteropBuilder.Model
@@ -60,6 +61,21 @@ namespace Win32InteropBuilder.Model
         public virtual PrimitiveTypeCode PrimitiveTypeCode { get; set; } = PrimitiveTypeCode.Object;
 
         public virtual bool IsConstableType() => FullName.IsConstableType(FullName);
+
+        public virtual IEnumerable<BuilderType> AllInterfaces
+        {
+            get
+            {
+                foreach (var iface in Interfaces)
+                {
+                    yield return iface;
+                    foreach (var child in iface.AllInterfaces)
+                    {
+                        yield return child;
+                    }
+                }
+            }
+        }
 
         public virtual IEnumerable<BuilderMethod> GeneratedMethods
         {
@@ -130,6 +146,7 @@ namespace Win32InteropBuilder.Model
 
             Guid = context.GetInteropGuid(typeDef.GetCustomAttributes());
             TypeAttributes = typeDef.Attributes;
+            IsNested = typeDef.IsNested;
             context.TypesToBuild.Add(this);
 
             context.CurrentTypes.Push(this);
@@ -175,6 +192,7 @@ namespace Win32InteropBuilder.Model
                 if (nestedType == null)
                     continue;
 
+                nestedType.IsNested = nestedDef.IsNested;
                 nestedType.IsGenerated = false;
                 context.CurrentTypes.Push(nestedType);
                 try
@@ -326,7 +344,7 @@ namespace Win32InteropBuilder.Model
             if (context.MappedTypes.TryGetValue(FullName, out var mappedType) && mappedType != this)
                 return mappedType.GetGeneratedName(context);
 
-            var un = context.Configuration.GetGeneration();
+            var un = context.Configuration.GetUnifiedGeneration();
             if (WellKnownTypes.All.TryGetValue(FullName, out var type))
             {
                 if (context.ImplicitNamespaces.Contains(type.FullName.Namespace))
@@ -381,36 +399,6 @@ namespace Win32InteropBuilder.Model
 
             SortCollections();
 
-            if (GetType() == typeof(BuilderType))
-            {
-                // base type handling only (including constants & functions)
-                var un = context.Configuration.GetGeneration();
-                if (un != null)
-                {
-                    var ico = isConstants();
-                    var ifu = isFunctions();
-                    if (!ico && !ifu)
-                    {
-                        if (un.ConstantsFileName != null)
-                        {
-                            context.ConstantsTypes.Add(this);
-                        }
-
-                        if (un.FunctionsFileName != null)
-                        {
-                            context.FunctionsTypes.Add(this);
-                        }
-
-                        // nothing to do here?
-                        if (un.ConstantsFileName != null && un.FunctionsFileName != null)
-                            return;
-                    }
-
-                    bool isConstants() => FullName.Namespace == un.Namespace && FullName.Name == un.ConstantsFileName;
-                    bool isFunctions() => FullName.Namespace == un.Namespace && FullName.Name == un.FunctionsFileName;
-                }
-            }
-
             using var writer = new StringWriter();
             context.CurrentWriter = new IndentedTextWriter(writer);
             try
@@ -423,8 +411,8 @@ namespace Win32InteropBuilder.Model
                 context.CurrentWriter = null;
             }
 
-            var ns = context.MapGeneratedFullName(FullName).Namespace.Replace('.', Path.DirectorySeparatorChar);
             var text = writer.ToString();
+            var ns = context.MapGeneratedFullName(FullName).Namespace.Replace('.', Path.DirectorySeparatorChar);
             var fileName = FileName + context.Language.FileExtension;
             var typePath = Path.Combine(context.Configuration.OutputDirectoryPath, ns, fileName);
             if (IOUtilities.PathIsFile(typePath))
@@ -451,31 +439,32 @@ namespace Win32InteropBuilder.Model
             context.Language.GenerateCode(context, this);
         }
 
-        public virtual BuilderType CloneType(BuilderContext context)
+        public virtual BuilderType CloneType(BuilderContext context, FullName? fullName = null)
         {
             ArgumentNullException.ThrowIfNull(context);
+            fullName ??= FullName;
             if (this is InterfaceType)
-                return context.CreateInterfaceType(FullName);
+                return context.CreateInterfaceType(fullName);
 
             if (this is InlineArrayType at)
-                return context.CreateInlineArrayType(at.ElementType, at.Size);
+                return context.CreateInlineArrayType(at.ElementType, at.Size, fullName);
 
             if (this is DelegateType)
-                return context.CreateDelegateType(FullName);
+                return context.CreateDelegateType(fullName);
 
             if (this is StructureType)
-                return context.CreateStructureType(FullName);
+                return context.CreateStructureType(fullName);
 
             if (this is EnumType)
-                return context.CreateEnumType(FullName);
+                return context.CreateEnumType(fullName);
 
-            return context.CreateBuilderType(FullName);
+            return context.CreateBuilderType(fullName);
         }
 
-        public virtual BuilderType Clone(BuilderContext context)
+        public virtual BuilderType Clone(BuilderContext context, FullName? fullName = null)
         {
             ArgumentNullException.ThrowIfNull(context);
-            var clone = CloneType(context);
+            var clone = CloneType(context, fullName);
             CopyTo(clone);
             return clone;
         }
@@ -513,6 +502,12 @@ namespace Win32InteropBuilder.Model
             if (bytes.Length == 4 && FullName == WellKnownTypes.SystemUInt32.FullName)
                 return BitConverter.ToUInt32(bytes, 0);
 
+            if (bytes.Length == 1 && FullName == WellKnownTypes.SystemByte.FullName)
+                return bytes[0];
+
+            if (bytes.Length == 1 && FullName == WellKnownTypes.SystemSByte.FullName)
+                return (sbyte)bytes[0];
+
             if (bytes.Length == 4 && FullName == WellKnownTypes.SystemSingle.FullName)
                 return BitConverter.ToSingle(bytes, 0);
 
@@ -531,6 +526,12 @@ namespace Win32InteropBuilder.Model
             if (bytes.Length == 8 && FullName == WellKnownTypes.SystemDouble.FullName)
                 return BitConverter.ToDouble(bytes, 0);
 
+            if (FullName == WellKnownTypes.SystemString.FullName)
+            {
+                var str = Encoding.Unicode.GetString(bytes);
+                return str;
+            }
+
             // we currently presume all enums are Int32...
             if (bytes.Length == 4 && this is EnumType)
                 return BitConverter.ToInt32(bytes, 0);
@@ -547,7 +548,7 @@ namespace Win32InteropBuilder.Model
                     return enumType.UnderlyingType.GetValue(bytes);
             }
 
-            throw new NotSupportedException();
+            throw new NotSupportedException($"Bytes length {bytes.Length} for type '{FullName}'.");
         }
 
         public override int GetHashCode() => FullName.GetHashCode();

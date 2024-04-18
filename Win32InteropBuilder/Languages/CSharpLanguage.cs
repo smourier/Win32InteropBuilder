@@ -154,7 +154,7 @@ namespace Win32InteropBuilder.Languages
                 return;
             }
 
-            var un = context.Configuration.GetGeneration();
+            var un = context.Configuration.GetUnifiedGeneration();
 
             string? staticText = null;
             if (type.TypeAttributes.HasFlag(TypeAttributes.Sealed) && type.TypeAttributes.HasFlag(TypeAttributes.Abstract))
@@ -162,7 +162,7 @@ namespace Win32InteropBuilder.Languages
                 staticText = "static ";
             }
 
-            context.CurrentWriter.Write($"public {staticText}partial class {GetIdentifier(type.FullName.Name)}");
+            context.CurrentWriter.Write($"public {staticText}partial class {GetIdentifier(type.GetGeneratedName(context))}");
             context.CurrentWriter.WriteLine();
             context.CurrentWriter.WithParens(() =>
             {
@@ -204,7 +204,7 @@ namespace Win32InteropBuilder.Languages
                             continue;
                     }
 
-                    GenerateCode(context, method);
+                    GenerateCode(context, type, method);
                     if (i != type.Methods.Count - 1)
                     {
                         context.CurrentWriter.WriteLine();
@@ -250,7 +250,7 @@ namespace Win32InteropBuilder.Languages
             }
             else
             {
-                context.CurrentWriter.Write($"public partial struct {GetIdentifier(type.FullName.Name)}");
+                context.CurrentWriter.Write($"public partial struct {GetIdentifier(type.GetGeneratedName(context))}");
             }
 
             context.CurrentWriter.WriteLine();
@@ -333,14 +333,22 @@ namespace Win32InteropBuilder.Languages
                 if (method.ReturnType != null)
                 {
                     var mapped = context.MapType(method.ReturnType);
-                    typeName = mapped.GetGeneratedName(context);
+
+                    if (mapped is InterfaceType)
+                    {
+                        typeName = "nint";
+                    }
+                    else
+                    {
+                        typeName = mapped.GetGeneratedName(context);
+                    }
                 }
                 else
                 {
                     typeName = "void";
                 }
 
-                context.CurrentWriter.Write($"public delegate {GetTypeReferenceName(typeName)} {GetIdentifier(type.FullName.Name)}(");
+                context.CurrentWriter.Write($"public delegate {GetTypeReferenceName(typeName)} {GetIdentifier(type.GetGeneratedName(context))}(");
                 for (var j = 0; j < method.Parameters.Count; j++)
                 {
                     var parameter = method.Parameters[j];
@@ -351,7 +359,7 @@ namespace Win32InteropBuilder.Languages
                         parameter.Attributes &= ~ParameterAttributes.Out;
                     }
 
-                    GenerateCode(context, parameter);
+                    GenerateCode(context, type, parameter);
                     if (j != method.Parameters.Count - 1)
                     {
                         context.CurrentWriter.Write(", ");
@@ -373,7 +381,7 @@ namespace Win32InteropBuilder.Languages
             ArgumentNullException.ThrowIfNull(type);
 
             context.CurrentWriter.WriteLine($"[InlineArray({type.Size})]");
-            context.CurrentWriter.WriteLine($"public partial struct {GetIdentifier(type.FullName.Name)}");
+            context.CurrentWriter.WriteLine($"public partial struct {GetIdentifier(type.GetGeneratedName(context))}");
             context.CurrentWriter.WithParens(() =>
             {
                 var elementName = type.ElementName ?? "Data";
@@ -400,7 +408,7 @@ namespace Win32InteropBuilder.Languages
             }
 
             context.CurrentWriter.WriteLine($"[GeneratedComInterface, Guid(\"{type.Guid.GetValueOrDefault()}\")]");
-            context.CurrentWriter.Write($"public partial interface {GetIdentifier(type.FullName.Name)}");
+            context.CurrentWriter.Write($"public partial interface {GetIdentifier(type.GetGeneratedName(context))}");
 
             if (type.Interfaces.Count > 0)
             {
@@ -413,7 +421,7 @@ namespace Win32InteropBuilder.Languages
                 for (var i = 0; i < type.Methods.Count; i++)
                 {
                     var method = type.Methods[i];
-                    GenerateCode(context, method);
+                    GenerateCode(context, type, method);
                     if (i != type.Methods.Count - 1)
                     {
                         context.CurrentWriter.WriteLine();
@@ -438,7 +446,7 @@ namespace Win32InteropBuilder.Languages
                 context.CurrentWriter.WriteLine("[Flags]");
             }
 
-            context.CurrentWriter.Write($"public enum {GetIdentifier(type.FullName.Name)}");
+            context.CurrentWriter.Write($"public enum {GetIdentifier(type.GetGeneratedName(context))}");
             if (type.UnderlyingType != null)
             {
                 var typeName = GetTypeReferenceName(type.UnderlyingType.GetGeneratedName(context));
@@ -466,10 +474,11 @@ namespace Win32InteropBuilder.Languages
             });
         }
 
-        public virtual void GenerateCode(BuilderContext context, BuilderMethod method)
+        public virtual void GenerateCode(BuilderContext context, BuilderType type, BuilderMethod method)
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(context.CurrentWriter);
+            ArgumentNullException.ThrowIfNull(type);
             ArgumentNullException.ThrowIfNull(method);
 
             if (method.Documentation != null)
@@ -524,30 +533,66 @@ namespace Win32InteropBuilder.Languages
                 staticText = "static partial ";
             }
 
-            context.CurrentWriter.Write($"public {staticText}{GetTypeReferenceName(typeName)} {GetIdentifier(method.Name)}(");
+            var methodName = GetIdentifier(method.Name);
+            string? comments = null;
+            foreach (var iface in type.AllInterfaces)
+            {
+                var existing = iface.Methods.FirstOrDefault(m => HaveSameSignature(context, m, method));
+                if (existing != null)
+                {
+                    methodName = type.FullName.Name + "_" + methodName;
+                    comments = " // renamed, see https://github.com/dotnet/runtime/issues/101240";
+                }
+            }
+
+            context.CurrentWriter.Write($"public {staticText}{GetTypeReferenceName(typeName)} {methodName}(");
             for (var j = 0; j < method.Parameters.Count; j++)
             {
                 var parameter = method.Parameters[j];
-                GenerateCode(context, parameter);
+                GenerateCode(context, type, parameter);
                 if (j != method.Parameters.Count - 1)
                 {
                     context.CurrentWriter.Write(", ");
                 }
             }
-            context.CurrentWriter.WriteLine(");");
+            context.CurrentWriter.WriteLine($");{comments}");
         }
 
-        public virtual void GenerateCode(BuilderContext context, BuilderParameter parameter)
+        protected virtual bool HaveSameSignature(BuilderContext context, BuilderMethod method1, BuilderMethod method2)
         {
             ArgumentNullException.ThrowIfNull(context);
-            ArgumentNullException.ThrowIfNull(context.CurrentWriter);
+            ArgumentNullException.ThrowIfNull(method1);
+            ArgumentNullException.ThrowIfNull(method2);
+            if (method1 == method2)
+                return true;
+
+            if (method1.Name != method2.Name)
+                return false;
+
+            if (method1.Parameters.Count != method2.Parameters.Count)
+                return false;
+
+            for (var i = 0; i < method1.Parameters.Count; i++)
+            {
+                // hope context are similar
+                var def1 = GetParameterDef(context, method1.Parameters[i]);
+                var def2 = GetParameterDef(context, method2.Parameters[i]);
+                if (def1.TypeName != def2.TypeName || def1.Direction != def2.Direction)
+                    return false;
+            }
+            return true;
+        }
+
+        protected virtual ParameterDef GetParameterDef(BuilderContext context, BuilderParameter parameter)
+        {
+            ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(parameter);
             if (parameter.Type == null)
                 throw new InvalidOperationException();
 
             var mapped = context.MapType(parameter.Type);
             var typeName = GetTypeReferenceName(mapped.GetGeneratedName(context));
-
+            string? comments = null;
             string? marshalAs = null;
             if (parameter.UnmanagedType.HasValue)
             {
@@ -561,7 +606,8 @@ namespace Win32InteropBuilder.Languages
             string? direction = null;
             if (typeName == "byte" && parameter.Type.Indirections > 0)
             {
-                typeName = "nint /* byte array */";
+                typeName = "nint";
+                comments = " /* byte array */";
                 marshalAs = null;
                 if (parameter.Type.Indirections > 1)
                 {
@@ -573,7 +619,8 @@ namespace Win32InteropBuilder.Languages
                 var optionalPtr = parameter.Attributes.HasFlag(ParameterAttributes.Optional) & parameter.Type.Indirections > 0;
                 if (optionalPtr)
                 {
-                    typeName = $"nint /* {typeName} */";
+                    typeName = "nint";
+                    comments = $"/* {typeName} */";
                     marshalAs = null;
                 }
                 else
@@ -609,21 +656,50 @@ namespace Win32InteropBuilder.Languages
                     }
                 }
             }
+            return new ParameterDef { Direction = direction, TypeName = typeName, MarshalAs = marshalAs, Comments = comments };
+        }
 
-            if (direction == "out" && typeName == "nint")
+        protected class ParameterDef
+        {
+            public virtual string? Direction { get; set; }
+            public virtual string? MarshalAs { get; set; }
+            public virtual string? TypeName { get; set; }
+            public virtual string? Comments { get; set; }
+
+            public override string ToString() => $"{MarshalAs}{Direction}{TypeName}{Comments}";
+        }
+
+        public virtual void GenerateCode(BuilderContext context, BuilderType type, BuilderParameter parameter)
+        {
+            ArgumentNullException.ThrowIfNull(context);
+            ArgumentNullException.ThrowIfNull(context.CurrentWriter);
+            ArgumentNullException.ThrowIfNull(type);
+            ArgumentNullException.ThrowIfNull(parameter);
+            if (parameter.Type == null)
+                throw new InvalidOperationException();
+
+            var def = GetParameterDef(context, parameter);
+            if (type is DelegateType)
             {
+                // there are currently big limits to delegate marshaling
+                if (def.Direction != null || parameter.Type is InterfaceType || parameter.Type is DelegateType)
+                {
+                    def.Comments = $" /* {def.Direction} {def.TypeName} */";
+                    def.Direction = null;
+                    def.TypeName = "nint";
+                }
             }
 
-            if (marshalAs != null)
+            if (def.MarshalAs != null)
             {
-                marshalAs = $"[MarshalAs(UnmanagedType.{marshalAs})] ";
+                def.MarshalAs = $"[MarshalAs(UnmanagedType.{def.MarshalAs})] ";
             }
 
-            if (direction != null)
+            if (def.Direction != null)
             {
-                direction += " ";
+                def.Direction += " ";
             }
-            context.CurrentWriter.Write($"{marshalAs}{direction}{typeName} {GetIdentifier(parameter.Name)}");
+            context.CurrentWriter.Write($"{def.MarshalAs}{def.Direction}{def.TypeName}{def.Comments} {GetIdentifier(parameter.Name)}");
         }
 
         private static readonly ConcurrentDictionary<string, string> _typeKeywords = new()

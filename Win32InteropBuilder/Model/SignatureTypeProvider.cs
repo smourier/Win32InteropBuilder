@@ -24,6 +24,13 @@ namespace Win32InteropBuilder.Model
                 Context.AddDependencies(elementType);
                 var arrayType = Context.CreateInlineArrayType(elementType, shape.Sizes[0]);
                 Context.TypesToBuild.Add(arrayType);
+
+                // nested element type => nested inline array
+                if (elementType.FullName.NestedName != null)
+                {
+                    arrayType.IsNested = true;
+                    Context.CurrentTypes.Peek().NestedTypes.Add(arrayType);
+                }
                 return arrayType;
             }
 

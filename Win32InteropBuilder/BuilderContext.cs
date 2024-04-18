@@ -52,7 +52,7 @@ namespace Win32InteropBuilder
         public virtual BuilderMethod CreateBuilderMethod(string name) => new(name);
         public virtual BuilderParameter CreateBuilderParameter(string name, int sequenceNumber) => new(name, sequenceNumber);
         public virtual BuilderField CreateBuilderField(string name) => new(name);
-        public virtual BuilderType CreateInlineArrayType(BuilderType elementType, int size) => new InlineArrayType(elementType, size);
+        public virtual BuilderType CreateInlineArrayType(BuilderType elementType, int size, FullName? fullName = null) => new InlineArrayType(elementType, size, fullName);
 
         public virtual FullName GetFullName(TypeDefinition typeDef)
         {
@@ -143,7 +143,7 @@ namespace Win32InteropBuilder
             ArgumentNullException.ThrowIfNull(Configuration);
             ArgumentNullException.ThrowIfNull(Configuration.Generation);
 
-            var un = Configuration.GetGeneration();
+            var un = Configuration.GetUnifiedGeneration();
             if (un != null)
                 return new FullName(un.Namespace!, FullName.HRESULT.Name);
 

@@ -62,7 +62,7 @@ namespace Win32InteropBuilder
             public virtual string? TypeName { get; set; }
         }
 
-        internal BuilderGeneration.UnifiedGeneration? GetGeneration()
+        internal BuilderGeneration.UnifiedGeneration? GetUnifiedGeneration()
         {
             var ns = Generation?.Unified?.Namespace.Nullify();
             if (ns == null)
