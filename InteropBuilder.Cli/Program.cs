@@ -26,7 +26,7 @@ namespace InteropBuilder.Cli
             Console.WriteLine(Assembly.GetEntryAssembly()!.GetName().Name!.ToUpperInvariant() + " <config.json> [outputpath]");
             Console.WriteLine();
             Console.WriteLine("Description:");
-            Console.WriteLine("    This tool is used to generate Win32 interop .cs files from Microsoft.Windows.SDK.Win32Metadata and configuration directives.");
+            Console.WriteLine("    This tool is used to generate Win32 interop .cs files from Microsoft.Windows.SDK.Win32Metadata.");
             Console.WriteLine();
             Console.WriteLine("Examples:");
             Console.WriteLine();
