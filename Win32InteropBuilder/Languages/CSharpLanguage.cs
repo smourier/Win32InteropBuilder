@@ -147,7 +147,13 @@ namespace Win32InteropBuilder.Languages
 
             var un = context.Configuration.GetGeneration();
 
-            context.CurrentWriter.Write($"public partial class {GetIdentifier(type.FullName.Name)}");
+            string? staticText = null;
+            if (type.TypeAttributes.HasFlag(TypeAttributes.Sealed) && type.TypeAttributes.HasFlag(TypeAttributes.Abstract))
+            {
+                staticText = "static ";
+            }
+
+            context.CurrentWriter.Write($"public {staticText}partial class {GetIdentifier(type.FullName.Name)}");
             context.CurrentWriter.WriteLine();
             context.CurrentWriter.WithParens(() =>
             {

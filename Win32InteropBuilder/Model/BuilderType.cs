@@ -37,6 +37,7 @@ namespace Win32InteropBuilder.Model
         public virtual Type? ClrType { get; set; }
         public virtual TypeAttributes TypeAttributes { get; set; }
         public virtual bool IsGenerated { get; set; } = true;
+        public virtual bool IsNested { get; set; }
         public virtual int Indirections { get; set; }
         public virtual ArrayShape? ArrayShape { get; set; }
         public virtual IList<BuilderMethod> Methods => _methods;
@@ -364,6 +365,8 @@ namespace Win32InteropBuilder.Model
             }
 
             IOUtilities.FileEnsureDirectory(typePath);
+
+            context.LogVerbose(FullName + " => " + typePath);
             File.WriteAllText(typePath, text, context.Configuration.FinalOutputEncoding);
             context.ExistingFiles.Remove(typePath);
         }

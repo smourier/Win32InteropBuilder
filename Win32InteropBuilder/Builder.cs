@@ -22,10 +22,11 @@ namespace Win32InteropBuilder
             Converters = { new EncodingConverter() }
         };
 
-        public static void Run(string configurationPath, string winMdPath)
+        public static void Run(string configurationPath, string winMdPath, string outputDirectoryPath)
         {
             ArgumentNullException.ThrowIfNull(configurationPath);
             ArgumentNullException.ThrowIfNull(winMdPath);
+            ArgumentNullException.ThrowIfNull(outputDirectoryPath);
 
             BuilderConfiguration? configuration;
             try
@@ -52,8 +53,8 @@ namespace Win32InteropBuilder
             configuration.Language ??= new BuilderConfiguration.LanguageConfiguration();
             configuration.Language.TypeName ??= typeof(CSharpLanguage).AssemblyQualifiedName!;
             configuration.BuilderTypeName ??= typeof(Builder).AssemblyQualifiedName!;
-            configuration.WinMdPath ??= Path.Combine(winMdPath, "Windows.Win32.winmd");
-            configuration.OutputDirectoryPath ??= Path.GetFullPath(CommandLine.Current.GetNullifiedArgument(1) ?? Path.GetFileNameWithoutExtension(configurationPath));
+            configuration.WinMdPath ??= winMdPath;
+            configuration.OutputDirectoryPath ??= outputDirectoryPath;
 
             var builderType = Type.GetType(configuration.BuilderTypeName, true)!;
             var builder = (Builder)Activator.CreateInstance(builderType)!;
@@ -232,13 +233,10 @@ namespace Win32InteropBuilder
             foreach (var type in context.TypesToBuild.OrderBy(t => t.FullName))
             {
                 var finalType = type;
-                context.LogVerbose(finalType);
                 if (context.MappedTypes.TryGetValue(type.FullName, out var mappedType))
                 {
-                    context.LogVerbose(finalType + " => " + mappedType);
                     finalType = mappedType;
                 }
-
                 if (!finalType.IsGenerated)
                     continue;
 
@@ -262,6 +260,7 @@ namespace Win32InteropBuilder
                 {
                     var fields = context.ConstantsTypes.SelectMany(t => t.Fields).ToHashSet();
                     var constantsType = context.CreateBuilderType(new FullName(un.Namespace!, un.ConstantsFileName));
+                    constantsType.TypeAttributes |= TypeAttributes.Abstract | TypeAttributes.Sealed; // static
                     constantsType.Fields.AddRange(fields);
 
                     if (constantsType.IsGenerated)
@@ -274,6 +273,7 @@ namespace Win32InteropBuilder
                 {
                     var functions = context.FunctionsTypes.SelectMany(t => t.Methods).ToHashSet();
                     var functionsType = context.CreateBuilderType(new FullName(un.Namespace!, un.FunctionsFileName));
+                    functionsType.TypeAttributes |= TypeAttributes.Abstract | TypeAttributes.Sealed; // static
                     functionsType.Methods.AddRange(functions);
 
                     if (functionsType.IsGenerated)
