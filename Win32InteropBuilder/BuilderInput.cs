@@ -12,7 +12,8 @@ namespace Win32InteropBuilder
                 IsReverse = true;
                 input = input[1..];
             }
-            else if (input.EndsWith('*'))
+
+            if (input.EndsWith('*'))
             {
                 IsWildcard = true;
                 input = input[..^1];
