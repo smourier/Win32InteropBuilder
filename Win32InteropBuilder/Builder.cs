@@ -335,6 +335,7 @@ namespace Win32InteropBuilder
                     duplicateFiles[typePath].Add(finalType);
                 }
 
+                // try to come up with unique names for duplicate files
                 foreach (var kv in duplicateFiles.Where(k => k.Value.Count > 1))
                 {
                     var list = kv.Value;
@@ -398,6 +399,16 @@ namespace Win32InteropBuilder
 
                         if (indices.All(i => i == 0))
                         {
+                            // we've done our best but they apparently reside in same namespace,
+                            // happens in rare cases at least on:
+                            //
+                            // Windows.Win32.Media.DirectShow.AVIStreamHeader
+                            // Windows.Win32.Media.DirectShow.AVISTREAMHEADER
+                            for (var i = 0; i < list.Count; i++)
+                            {
+                                list[i].FileName += "_" + i;
+                            }
+
                             dedup = true;
                         }
                     }
@@ -416,15 +427,6 @@ namespace Win32InteropBuilder
                     continue;
 
                 finalType.Generate(context);
-            }
-
-            if (context.Configuration.RemoveNonGeneratedFiles)
-            {
-                foreach (var filePath in context.ExistingFiles)
-                {
-                    IOUtilities.FileDelete(filePath);
-                }
-                IOUtilities.DirectoryDeleteEmptySubDirectories(context.Configuration.OutputDirectoryPath);
             }
 
             if (un != null)
@@ -457,6 +459,15 @@ namespace Win32InteropBuilder
                         functionsType.Generate(context);
                     }
                 }
+            }
+
+            if (context.Configuration.RemoveNonGeneratedFiles)
+            {
+                foreach (var filePath in context.ExistingFiles)
+                {
+                    IOUtilities.FileDelete(filePath);
+                }
+                IOUtilities.DirectoryDeleteEmptySubDirectories(context.Configuration.OutputDirectoryPath);
             }
         }
     }

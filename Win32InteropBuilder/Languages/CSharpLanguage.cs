@@ -554,17 +554,16 @@ namespace Win32InteropBuilder.Languages
             if (method.ReturnType != null && method.ReturnType != WellKnownTypes.SystemVoid)
             {
                 var mapped = context.MapType(method.ReturnType);
+                var um = mapped.UnmanagedType;
                 if (Configuration.MarshalAsError(mapped.FullName))
                 {
-                    mapped.UnmanagedType = UnmanagedType.Error;
+                    um = UnmanagedType.Error;
                 }
 
-                if (mapped.UnmanagedType.HasValue)
+                if (um.HasValue &&
+                    (!method.Attributes.HasFlag(MethodAttributes.Static) || mapped == WellKnownTypes.SystemBoolean))
                 {
-                    if (!method.Attributes.HasFlag(MethodAttributes.Static) || mapped == WellKnownTypes.SystemBoolean)
-                    {
-                        context.CurrentWriter.WriteLine($"[return: MarshalAs(UnmanagedType.{mapped.UnmanagedType.Value})]");
-                    }
+                    context.CurrentWriter.WriteLine($"[return: MarshalAs(UnmanagedType.{um.Value})]");
                 }
                 typeName = GetTypeReferenceName(mapped.GetGeneratedName(context));
             }

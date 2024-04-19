@@ -22,6 +22,7 @@ namespace Win32InteropBuilder.Model
         private readonly HashSet<MethodDefinitionHandle> _excludedMethods = [];
         private readonly HashSet<FieldDefinitionHandle> _includedFields = [];
         private readonly HashSet<FieldDefinitionHandle> _excludedFields = [];
+        private string? _fileName;
 
         public BuilderType(FullName fullName)
         {
@@ -57,7 +58,7 @@ namespace Win32InteropBuilder.Model
         public virtual string? Documentation { get; set; }
         public virtual string? SupportedOSPlatform { get; set; }
         public virtual Guid? Guid { get; set; }
-        public virtual string FileName => FullName.Name;
+        public virtual string FileName { get => _fileName ?? FullName.Name; set => _fileName = value; }
         public virtual UnmanagedType? UnmanagedType { get; set; }
         public virtual PrimitiveTypeCode PrimitiveTypeCode { get; set; } = PrimitiveTypeCode.Object;
 
@@ -426,6 +427,7 @@ namespace Win32InteropBuilder.Model
             var ns = context.MapGeneratedFullName(FullName).Namespace.Replace('.', Path.DirectorySeparatorChar);
             var fileName = FileName + context.Language.FileExtension;
             var typePath = Path.Combine(context.Configuration.OutputDirectoryPath, ns, fileName);
+
             if (IOUtilities.PathIsFile(typePath))
             {
                 var existingText = EncodingDetector.ReadAllText(typePath, context.Configuration.EncodingDetectorMode, out _);
