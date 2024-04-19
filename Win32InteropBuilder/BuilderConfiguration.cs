@@ -43,8 +43,8 @@ namespace Win32InteropBuilder
 
         public class BuilderGeneration
         {
+            // unsupported yet
             public virtual bool HandleToIntPtr { get; set; } //= true;
-            public virtual bool HRESULTIsError { get; set; } = true;
 
             public virtual UnifiedGeneration Unified { get; set; } = new();
 

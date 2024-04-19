@@ -24,6 +24,7 @@ namespace Win32InteropBuilder.Languages
         {
             Configuration = element.Deserialize<CSharpLanguageConfiguration>(Builder.JsonSerializerOptions) ?? new();
 
+            // supported constants types
             if (Configuration.SupportedConstantTypes.Any(b => b.MatchesEverything))
             {
                 Configuration.SupportedConstantTypes.Clear();
@@ -33,27 +34,19 @@ namespace Win32InteropBuilder.Languages
                 // add all c# const
                 foreach (var fn in new CSharpLanguage().ConstableTypes)
                 {
-                    addFullName(fn);
+                    Configuration.AddSupportedConstantType(fn);
                 }
-
-                addFullName(WellKnownTypes.SystemIntPtr.FullName);
-                addFullName(WellKnownTypes.SystemUIntPtr.FullName);
-                addFullName(WellKnownTypes.SystemGuid.FullName);
+                Configuration.AddSupportedConstantType(WellKnownTypes.SystemIntPtr.FullName);
+                Configuration.AddSupportedConstantType(WellKnownTypes.SystemUIntPtr.FullName);
+                Configuration.AddSupportedConstantType(WellKnownTypes.SystemGuid.FullName);
 
                 // now remove all reverse we just keep an inclusion list
-                foreach (var type in Configuration.SupportedConstantTypes.Where(t => t.IsReverse).ToArray())
-                {
-                    Configuration.SupportedConstantTypes.Remove(type);
-                }
-
-                void addFullName(FullName fullName)
-                {
-                    if (Configuration.SupportedConstantTypes.Any(b => b.IsReverse && b.Matches(fullName)))
-                        return;
-
-                    Configuration.SupportedConstantTypes.Add(new BuilderFullNameInput(fullName));
-                }
+                Configuration.ClearSupportedConstantTypeReverses();
             }
+
+            // marshal as error types
+            Configuration.AddMarshalAsErrorType(FullName.HRESULT);
+            Configuration.ClearMarshalAsErrorTypeReverses();
         }
 
         public virtual string GetValueAsString(BuilderContext context, BuilderType type, object? value)
@@ -561,6 +554,11 @@ namespace Win32InteropBuilder.Languages
             if (method.ReturnType != null && method.ReturnType != WellKnownTypes.SystemVoid)
             {
                 var mapped = context.MapType(method.ReturnType);
+                if (Configuration.MarshalAsError(mapped.FullName))
+                {
+                    mapped.UnmanagedType = UnmanagedType.Error;
+                }
+
                 if (mapped.UnmanagedType.HasValue)
                 {
                     if (!method.Attributes.HasFlag(MethodAttributes.Static) || mapped == WellKnownTypes.SystemBoolean)
@@ -593,7 +591,12 @@ namespace Win32InteropBuilder.Languages
                 }
             }
 
-            context.CurrentWriter.Write($"public {staticText}{GetTypeReferenceName(typeName)} {methodName}(");
+            string? publicText = null;
+            if (type is not InterfaceType)
+            {
+                publicText = "public ";
+            }
+            context.CurrentWriter.Write($"{publicText}{staticText}{GetTypeReferenceName(typeName)} {methodName}(");
             for (var j = 0; j < method.Parameters.Count; j++)
             {
                 var parameter = method.Parameters[j];

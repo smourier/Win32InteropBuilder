@@ -5,7 +5,6 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
-using System.Runtime.InteropServices;
 using System.Text.Json;
 using Win32InteropBuilder.Languages;
 using Win32InteropBuilder.Model;
@@ -257,14 +256,6 @@ namespace Win32InteropBuilder
             ArgumentNullException.ThrowIfNull(context);
             context.MappedTypes[FullName.BOOL] = WellKnownTypes.SystemBoolean;
             context.MappedTypes[FullName.IUnknown] = WellKnownTypes.SystemIntPtr;
-
-            if (context.Configuration.Generation.HRESULTIsError)
-            {
-                var hr = context.AllTypes[FullName.HRESULT];
-                var hresult = hr.Clone(context);
-                hresult.UnmanagedType = UnmanagedType.Error;
-                context.MappedTypes[FullName.HRESULT] = hresult;
-            }
         }
 
         protected virtual void GenerateTypes(BuilderContext context)
