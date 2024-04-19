@@ -79,6 +79,72 @@ namespace Win32InteropBuilder.Languages
                 value = Conversions.ChangeType(value, type.ClrType, value, CultureInfo.InvariantCulture);
             }
 
+            if (value is sbyte sb)
+            {
+                if (sb == sbyte.MinValue)
+                    return "sbyte.MinValue";
+
+                if (sb == sbyte.MaxValue)
+                    return "sbyte.MaxValue";
+            }
+
+            if (value is short sh)
+            {
+                if (sh == short.MinValue)
+                    return "short.MinValue";
+
+                if (sh == short.MaxValue)
+                    return "short.MaxValue";
+            }
+
+            if (value is int i)
+            {
+                if (i == int.MinValue)
+                    return "int.MinValue";
+
+                if (i == int.MaxValue)
+                    return "int.MaxValue";
+            }
+
+            if (value is long l)
+            {
+                if (l == long.MinValue)
+                    return "long.MinValue";
+
+                if (l == long.MaxValue)
+                    return "long.MaxValue";
+            }
+
+            if (value is float f)
+            {
+                if (f == float.MinValue)
+                    return "float.MinValue";
+
+                if (f == float.MaxValue)
+                    return "float.MaxValue";
+            }
+
+            if (value is double d)
+            {
+                if (d == double.MinValue)
+                    return "double.MinValue";
+
+                if (d == float.MaxValue)
+                    return "double.MaxValue";
+            }
+
+            if (value is byte by && by == byte.MaxValue)
+                return "byte.MaxValue";
+
+            if (value is ushort u && u == ushort.MaxValue)
+                return "ushort.MaxValue";
+
+            if (value is uint ui && ui == uint.MaxValue)
+                return "uint.MaxValue";
+
+            if (value is ulong ul && ul == ulong.MaxValue)
+                return "ulong.MaxValue";
+
             var str = string.Format(CultureInfo.InvariantCulture, "{0}", value);
             if (value is float)
                 return str + "f";

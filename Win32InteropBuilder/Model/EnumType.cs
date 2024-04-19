@@ -19,6 +19,12 @@ namespace Win32InteropBuilder.Model
         public virtual bool IsFlags { get; set; }
         public virtual BuilderType? UnderlyingType { get; set; }
 
+        public override void ResolveType(BuilderContext context, TypeDefinition typeDef)
+        {
+            base.ResolveType(context, typeDef);
+            IsFlags = context.MetadataReader!.IsEnumFlags(typeDef.GetCustomAttributes());
+        }
+
         protected override void CopyTo(BuilderType copy)
         {
             base.CopyTo(copy);

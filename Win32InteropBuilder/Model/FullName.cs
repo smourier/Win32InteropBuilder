@@ -30,6 +30,7 @@ namespace Win32InteropBuilder.Model
         public static FullName UnicodeAttribute { get; } = new("Windows.Win32.Foundation.Metadata.UnicodeAttribute");
         public static FullName UnmanagedFunctionPointerAttribute { get; } = new(typeof(UnmanagedFunctionPointerAttribute));
         public static FullName MulticastDelegate { get; } = new(typeof(MulticastDelegate));
+        public static FullName FlagsAttribute { get; } = new(typeof(FlagsAttribute));
 
         public FullName(string @namespace, string name)
         {
