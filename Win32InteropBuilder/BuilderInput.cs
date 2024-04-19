@@ -25,8 +25,13 @@ namespace Win32InteropBuilder
         public bool IsWildcard { get; }
         public bool IsReverse { get; }
 
-        public override string ToString() => Input;
+        public bool MatchesEverything => IsWildcard && Input == string.Empty; // "*"
+        public bool ReversesEverything => IsReverse && Input == string.Empty; // "!"
 
+        public override string ToString() => $"{(IsReverse ? "!" : null)}{Input}{(IsWildcard ? "*" : null)}";
+
+        // not "Equals" to avoid confusion
+        protected virtual bool EqualsTo(BuilderInput<T> other) => other?.Input == Input && other.IsReverse == IsReverse && other.IsWildcard == IsWildcard;
         public abstract bool Matches(T type);
     }
 }

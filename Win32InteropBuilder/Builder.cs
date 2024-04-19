@@ -225,6 +225,7 @@ namespace Win32InteropBuilder
             if (context.Configuration.Generation.HandleToIntPtr)
             {
                 RemoveHandleTypes(context);
+                throw new NotSupportedException(); // yet
             }
         }
 
@@ -310,12 +311,12 @@ namespace Win32InteropBuilder
                         {
                             if (un.ConstantsFileName != null)
                             {
-                                context.ConstantsTypes.Add(finalType);
+                                context.TypesWithConstants.Add(finalType);
                             }
 
                             if (un.FunctionsFileName != null)
                             {
-                                context.FunctionsTypes.Add(finalType);
+                                context.TypesWithFunctions.Add(finalType);
                             }
 
                             // nothing to do here?
@@ -440,8 +441,9 @@ namespace Win32InteropBuilder
                 // build pseudo-types
                 if (un.ConstantsFileName != null)
                 {
-                    var fields = context.ConstantsTypes.SelectMany(t => t.GeneratedFields).ToHashSet();
+                    var fields = context.TypesWithConstants.SelectMany(t => t.GeneratedFields).ToHashSet();
                     var constantsType = context.CreateBuilderType(new FullName(un.Namespace!, un.ConstantsFileName));
+                    constantsType.Attributes |= BuilderTypeAttributes.IsUnifiedConstants;
                     constantsType.TypeAttributes |= TypeAttributes.Abstract | TypeAttributes.Sealed; // static
                     constantsType.Fields.AddRange(fields);
 
@@ -453,8 +455,9 @@ namespace Win32InteropBuilder
 
                 if (un.FunctionsFileName != null)
                 {
-                    var functions = context.FunctionsTypes.SelectMany(t => t.GeneratedMethods).ToHashSet();
+                    var functions = context.TypesWithFunctions.SelectMany(t => t.GeneratedMethods).ToHashSet();
                     var functionsType = context.CreateBuilderType(new FullName(un.Namespace!, un.FunctionsFileName));
+                    functionsType.Attributes |= BuilderTypeAttributes.IsUnifiedFunctions;
                     functionsType.TypeAttributes |= TypeAttributes.Abstract | TypeAttributes.Sealed; // static
                     functionsType.Methods.AddRange(functions);
 

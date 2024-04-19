@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Collections.Generic;
+using System.Text.Json;
 
 namespace Win32InteropBuilder.Model
 {
@@ -6,6 +7,7 @@ namespace Win32InteropBuilder.Model
     {
         string Name { get; }
         string FileExtension { get; }
+        IReadOnlyCollection<FullName> ConstableTypes { get; }
 
         void Configure(JsonElement element);
         void GenerateCode(BuilderContext context, BuilderType type);

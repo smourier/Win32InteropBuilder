@@ -1,32 +1,14 @@
 ﻿using System;
-using System.Collections.Concurrent;
-using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text.Json.Serialization;
+using Win32InteropBuilder.Utilities;
 
 namespace Win32InteropBuilder.Model
 {
-    public class FullName : IEquatable<FullName>, IComparable<FullName>, IComparable
+    [JsonConverter(typeof(JsonStringConverter<FullName>))]
+    public class FullName : IEquatable<FullName>, IComparable<FullName>, IComparable, IFullyNameable, ICreatableFromString<FullName>
     {
         public const char NestedTypesSeparator = '+';
-
-        // https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/classes#154-constants
-        private static readonly ConcurrentBag<FullName> _constableTypes =
-        [
-            WellKnownTypes.SystemSByte.FullName,
-            WellKnownTypes.SystemByte.FullName,
-            WellKnownTypes.SystemInt16.FullName,
-            WellKnownTypes.SystemUInt16.FullName,
-            WellKnownTypes.SystemInt32.FullName,
-            WellKnownTypes.SystemUInt32.FullName,
-            WellKnownTypes.SystemInt64.FullName,
-            WellKnownTypes.SystemUInt64.FullName,
-            WellKnownTypes.SystemChar.FullName,
-            WellKnownTypes.SystemSingle.FullName,
-            WellKnownTypes.SystemDouble.FullName,
-            WellKnownTypes.SystemDecimal.FullName,
-            WellKnownTypes.SystemBoolean.FullName,
-            WellKnownTypes.SystemString.FullName,
-        ];
 
         public static FullName SystemIntPtr { get; } = new(typeof(nint));
         public static FullName SystemValueType { get; } = new(typeof(ValueType));
@@ -86,6 +68,7 @@ namespace Win32InteropBuilder.Model
             Name = type.Name;
         }
 
+        FullName IFullyNameable.FullName => this;
         public string Namespace { get; }
         public string Name { get; }
         public string? NestedName
@@ -107,8 +90,7 @@ namespace Win32InteropBuilder.Model
         int IComparable.CompareTo(object? obj) => CompareTo(obj as FullName);
         public int CompareTo(FullName? other) { ArgumentNullException.ThrowIfNull(other); return ToString().CompareTo(other.ToString()); }
 
-        public static bool IsConstableType(FullName fullName) => _constableTypes.Contains(fullName);
-
+        public static FullName Create(string input) => new(input);
         public static bool operator !=(FullName? obj1, FullName? obj2) => !(obj1 == obj2);
         public static bool operator ==(FullName? obj1, FullName? obj2)
         {

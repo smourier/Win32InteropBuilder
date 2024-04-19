@@ -50,9 +50,12 @@ namespace Win32InteropBuilder
 
             public class UnifiedGeneration
             {
+                public const string DefaultFunctionsFileName = "Functions";
+                public const string DefaultConstantsFileName = "Constants";
+
                 public virtual string? Namespace { get; set; }
-                public virtual string? FunctionsFileName { get; set; } = "Functions";
-                public virtual string? ConstantsFileName { get; set; } = "Constants";
+                public virtual string? FunctionsFileName { get; set; } = DefaultFunctionsFileName;
+                public virtual string? ConstantsFileName { get; set; } = DefaultConstantsFileName;
             }
         }
 

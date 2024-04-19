@@ -29,8 +29,6 @@ namespace Win32InteropBuilder.Model
             }
         }
 
-        public override bool IsConstableType() => true;
-
         public override void ResolveFields(BuilderContext context, TypeDefinition typeDef)
         {
             ArgumentNullException.ThrowIfNull(context);

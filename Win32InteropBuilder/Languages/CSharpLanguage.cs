@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
@@ -16,11 +17,43 @@ namespace Win32InteropBuilder.Languages
         public string Name => "CSharp";
         public string FileExtension => ".cs";
         public CSharpLanguageConfiguration Configuration { get; private set; } = new();
+        public IReadOnlyCollection<FullName> ConstableTypes => _constableTypes;
 
         public override string ToString() => Name;
         public virtual void Configure(JsonElement element)
         {
             Configuration = element.Deserialize<CSharpLanguageConfiguration>(Builder.JsonSerializerOptions) ?? new();
+
+            if (Configuration.SupportedConstantTypes.Any(b => b.MatchesEverything))
+            {
+                Configuration.SupportedConstantTypes.Clear();
+            }
+            else
+            {
+                // add all c# const
+                foreach (var fn in new CSharpLanguage().ConstableTypes)
+                {
+                    addFullName(fn);
+                }
+
+                addFullName(WellKnownTypes.SystemIntPtr.FullName);
+                addFullName(WellKnownTypes.SystemUIntPtr.FullName);
+                addFullName(WellKnownTypes.SystemGuid.FullName);
+
+                // now remove all reverse we just keep an inclusion list
+                foreach (var type in Configuration.SupportedConstantTypes.Where(t => t.IsReverse).ToArray())
+                {
+                    Configuration.SupportedConstantTypes.Remove(type);
+                }
+
+                void addFullName(FullName fullName)
+                {
+                    if (Configuration.SupportedConstantTypes.Any(b => b.IsReverse && b.Matches(fullName)))
+                        return;
+
+                    Configuration.SupportedConstantTypes.Add(new BuilderFullNameInput(fullName));
+                }
+            }
         }
 
         public virtual string GetValueAsString(BuilderContext context, BuilderType type, object? value)
@@ -176,11 +209,15 @@ namespace Win32InteropBuilder.Languages
             context.CurrentWriter.WriteLine();
             context.CurrentWriter.WithParens(() =>
             {
+                // we're here mostly for constants.cs (if configured for unified namespace)
                 for (var i = 0; i < type.Fields.Count; i++)
                 {
                     var field = type.Fields[i];
                     if (field.Type == null)
                         throw new InvalidOperationException();
+
+                    if (!Configuration.IsSupportedAsConstant(field.Type.FullName))
+                        continue;
 
                     if (field.Documentation != null)
                     {
@@ -193,7 +230,7 @@ namespace Win32InteropBuilder.Languages
                         context.CurrentWriter.WriteLine($"[MarshalAs(UnmanagedType.{mapped.UnmanagedType.Value})]");
                     }
 
-                    var constText = field.Attributes.HasFlag(FieldAttributes.Literal) && field.Type.IsConstableType() ? "const" : "static readonly";
+                    var constText = field.Attributes.HasFlag(FieldAttributes.Literal) && context.IsConstableType(field.Type) ? "const" : "static readonly";
                     context.CurrentWriter.WriteLine($"public {constText} {GetTypeReferenceName(mapped.GetGeneratedName(context))} {GetIdentifier(field.Name)} = {GetValueAsString(context, field.Type, field.DefaultValue)};");
 
                     if (i != type.Fields.Count - 1 || type.Methods.Count > 0)
@@ -202,6 +239,7 @@ namespace Win32InteropBuilder.Languages
                     }
                 }
 
+                // we're here mostly for functions.cs (if configured for unified namespace)
                 for (var i = 0; i < type.Methods.Count; i++)
                 {
                     var method = type.Methods[i];
@@ -711,6 +749,25 @@ namespace Win32InteropBuilder.Languages
             }
             context.CurrentWriter.Write($"{def.MarshalAs}{def.Direction}{def.TypeName}{def.Comments} {GetIdentifier(parameter.Name)}");
         }
+
+        // https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/classes#154-constants
+        private static readonly ConcurrentBag<FullName> _constableTypes =
+        [
+            WellKnownTypes.SystemSByte.FullName,
+            WellKnownTypes.SystemByte.FullName,
+            WellKnownTypes.SystemInt16.FullName,
+            WellKnownTypes.SystemUInt16.FullName,
+            WellKnownTypes.SystemInt32.FullName,
+            WellKnownTypes.SystemUInt32.FullName,
+            WellKnownTypes.SystemInt64.FullName,
+            WellKnownTypes.SystemUInt64.FullName,
+            WellKnownTypes.SystemChar.FullName,
+            WellKnownTypes.SystemSingle.FullName,
+            WellKnownTypes.SystemDouble.FullName,
+            WellKnownTypes.SystemDecimal.FullName,
+            WellKnownTypes.SystemBoolean.FullName,
+            WellKnownTypes.SystemString.FullName,
+        ];
 
         private static readonly ConcurrentDictionary<string, string> _typeKeywords = new()
         {

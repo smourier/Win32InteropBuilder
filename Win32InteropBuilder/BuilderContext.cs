@@ -2,6 +2,7 @@
 using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
@@ -36,8 +37,9 @@ namespace Win32InteropBuilder
         public virtual IDictionary<FullName, BuilderType> MappedTypes { get; } = new Dictionary<FullName, BuilderType>();
         public virtual ISet<string> ImplicitNamespaces { get; } = new HashSet<string>();
         public virtual ISet<string> ExistingFiles { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        public virtual ISet<BuilderType> FunctionsTypes { get; } = new HashSet<BuilderType>();
-        public virtual ISet<BuilderType> ConstantsTypes { get; } = new HashSet<BuilderType>();
+        public virtual ISet<BuilderType> TypesWithFunctions { get; } = new HashSet<BuilderType>();
+        public virtual ISet<BuilderType> TypesWithConstants { get; } = new HashSet<BuilderType>();
+        public virtual HashSet<FullName> SupportedConstantTypes { get; } = [];
 
         // changing properties
         public virtual IndentedTextWriter? CurrentWriter { get; set; }
@@ -148,6 +150,15 @@ namespace Win32InteropBuilder
                 return new FullName(un.Namespace!, FullName.HRESULT.Name);
 
             return fullName;
+        }
+
+        public virtual bool IsConstableType(BuilderType type)
+        {
+            ArgumentNullException.ThrowIfNull(type);
+            if (type is EnumType)
+                return true;
+
+            return Language.ConstableTypes.Contains(type.FullName);
         }
 
         public virtual string GetConstantValue(BuilderType type, Model.Constant constant)

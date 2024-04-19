@@ -1,8 +1,9 @@
 ﻿using System;
+using Win32InteropBuilder.Utilities;
 
 namespace Win32InteropBuilder.Model
 {
-    public class BuilderMember : IDocumentable, ISupportable
+    public class BuilderMember : IDocumentable, ISupportable, INameable
     {
         public BuilderMember(string name)
         {

@@ -10,7 +10,7 @@ using Win32InteropBuilder.Utilities;
 
 namespace Win32InteropBuilder.Model
 {
-    public class BuilderType : IEquatable<BuilderType>, IDocumentable, ISupportable, IComparable, IComparable<BuilderType>
+    public class BuilderType : IEquatable<BuilderType>, IDocumentable, ISupportable, IFullyNameable, IComparable, IComparable<BuilderType>
     {
         public const string GeneratedInteropNamespace = "System.Runtime.InteropServices.InteropTypes";
 
@@ -37,7 +37,8 @@ namespace Win32InteropBuilder.Model
         }
 
         public FullName FullName { get; }
-        public BuilderType? BaseType { get; set; }
+        public virtual BuilderType? BaseType { get; set; }
+        public virtual BuilderTypeAttributes Attributes { get; set; }
         public virtual BuilderType? DeclaringType { get; set; }
         public virtual Type? ClrType { get; set; }
         public virtual TypeAttributes TypeAttributes { get; set; }
@@ -59,8 +60,6 @@ namespace Win32InteropBuilder.Model
         public virtual string FileName => FullName.Name;
         public virtual UnmanagedType? UnmanagedType { get; set; }
         public virtual PrimitiveTypeCode PrimitiveTypeCode { get; set; } = PrimitiveTypeCode.Object;
-
-        public virtual bool IsConstableType() => FullName.IsConstableType(FullName);
 
         public virtual IEnumerable<BuilderType> AllInterfaces
         {
