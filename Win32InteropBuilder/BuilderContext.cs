@@ -168,6 +168,13 @@ namespace Win32InteropBuilder
             return constant.ValueAsText;
         }
 
+        public virtual ParameterDef GetParameterDef(BuilderParameter parameter, ParameterDef defaultDef)
+        {
+            ArgumentNullException.ThrowIfNull(parameter);
+            ArgumentNullException.ThrowIfNull(defaultDef);
+            return defaultDef;
+        }
+
         public void LogInfo(object? message = null, [CallerMemberName] string? methodName = null) => Log(TraceLevel.Info, message, methodName);
         public void LogWarning(object? message = null, [CallerMemberName] string? methodName = null) => Log(TraceLevel.Warning, message, methodName);
         public void LogError(object? message = null, [CallerMemberName] string? methodName = null) => Log(TraceLevel.Error, message, methodName);

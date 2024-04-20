@@ -569,7 +569,6 @@ namespace Win32InteropBuilder.Model
         public override bool Equals(object? obj) => Equals(obj as BuilderType);
         public bool Equals(BuilderType? other) => other != null && other.FullName == FullName;
         public override string ToString() => FullName.ToString();
-
         int IComparable.CompareTo(object? obj) => CompareTo(obj as BuilderType);
         public int CompareTo(BuilderType? other)
         {
@@ -578,6 +577,21 @@ namespace Win32InteropBuilder.Model
                 return FullName.Name.CompareTo(other.FullName.Name);
 
             return FullName.Namespace.CompareTo(other.FullName.Namespace);
+        }
+
+        public static bool operator !=(BuilderType? obj1, BuilderType? obj2) => !(obj1 == obj2);
+        public static bool operator ==(BuilderType? obj1, BuilderType? obj2)
+        {
+            if (ReferenceEquals(obj1, obj2))
+                return true;
+
+            if (obj1 is null)
+                return false;
+
+            if (obj2 is null)
+                return false;
+
+            return obj1.Equals(obj2);
         }
     }
 }
