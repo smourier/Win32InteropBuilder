@@ -751,8 +751,8 @@ namespace Win32InteropBuilder.Languages
                 var optionalPtr = parameter.Attributes.HasFlag(ParameterAttributes.Optional) & parameter.Type.Indirections > 0;
                 if (optionalPtr)
                 {
+                    def.Comments = $" /* optional {def.TypeName} */";
                     def.TypeName = "nint";
-                    def.Comments = $"/* {def.TypeName} */";
                     def.MarshalAs = null;
                 }
                 else
