@@ -101,7 +101,10 @@ namespace Win32InteropBuilder
             using var pe = new PEReader(stream);
             context.MetadataReader = pe.GetMetadataReader();
             GatherTypes(context);
-            GenerateTypes(context);
+            if (context.Configuration.GenerateFiles)
+            {
+                GenerateTypes(context);
+            }
         }
 
         protected virtual void GatherTypes(BuilderContext context)

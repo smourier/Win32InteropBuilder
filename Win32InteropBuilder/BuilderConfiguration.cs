@@ -13,6 +13,7 @@ namespace Win32InteropBuilder
         public virtual string? WinMdPath { get; set; }
         public virtual string? OutputDirectoryPath { get; set; }
         public virtual bool DeleteOutputDirectory { get; set; }
+        public virtual bool GenerateFiles { get; set; } = true;
         public virtual Encoding? OutputEncoding { get; set; }
         public virtual EncodingDetectorMode EncodingDetectorMode { get; set; }
         public virtual bool RemoveNonGeneratedFiles { get; set; } = true;

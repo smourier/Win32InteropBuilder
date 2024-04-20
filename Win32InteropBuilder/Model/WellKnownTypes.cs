@@ -32,6 +32,7 @@ namespace Win32InteropBuilder.Model
         public static BuilderType SystemUIntPtr { get; } = new(typeof(nuint)) { IsGenerated = false, PrimitiveTypeCode = PrimitiveTypeCode.UIntPtr };
         public static BuilderType SystemValueType { get; } = new(typeof(ValueType)) { IsGenerated = false };
         public static BuilderType SystemVoid { get; } = new(typeof(void)) { IsGenerated = false, PrimitiveTypeCode = PrimitiveTypeCode.IntPtr };
+        public static BuilderType SystemAttribute { get; } = new(typeof(Attribute)) { IsGenerated = false };
 
         public static BuilderType CallingConvention { get; } = new EnumType(typeof(CallingConvention)) { IsGenerated = false };
 

@@ -2,7 +2,6 @@
 using System.Collections.Immutable;
 using System.Linq;
 using System.Reflection.Metadata;
-using Win32InteropBuilder.Utilities;
 
 namespace Win32InteropBuilder.Model
 {
@@ -72,7 +71,8 @@ namespace Win32InteropBuilder.Model
                     return nestedType;
             }
 
-            throw new EnumBasedException<Win32InteropBuilderExceptionCode>(Win32InteropBuilderExceptionCode.CantResolveType, $"Full name: {fn}");
+            Context.LogWarning("Can't resolve: " + fn.Name);
+            return WellKnownTypes.SystemObject;
         }
 
         public virtual BuilderType GetPrimitiveType(PrimitiveTypeCode typeCode)
