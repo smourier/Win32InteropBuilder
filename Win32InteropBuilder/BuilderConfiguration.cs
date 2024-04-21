@@ -45,6 +45,7 @@ namespace Win32InteropBuilder
         public class BuilderGeneration
         {
             public virtual ComOutPtrTarget ComOutPtrTarget { get; set; } = ComOutPtrTarget.UniqueObject;
+            public virtual bool AddNullToIntPtrValueTypes { get; set; } = true;
 
             // unsupported yet
             public virtual bool HandleToIntPtr { get; set; } //= true;

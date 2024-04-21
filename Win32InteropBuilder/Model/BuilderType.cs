@@ -45,6 +45,7 @@ namespace Win32InteropBuilder.Model
         public virtual TypeAttributes TypeAttributes { get; set; }
         public virtual bool IsGenerated { get; set; } = true;
         public virtual bool IsNested { get; set; }
+        public virtual bool IsValueType { get; set; }
         public virtual int Indirections { get; set; }
         public virtual ArrayShape? ArrayShape { get; set; }
         public virtual IList<BuilderMethod> Methods => _methods;
@@ -139,12 +140,13 @@ namespace Win32InteropBuilder.Model
             }
         }
 
-        public virtual void ResolveType(BuilderContext context, TypeDefinition typeDef)
+        protected virtual internal void ResolveType(BuilderContext context, TypeDefinition typeDef)
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(context.MetadataReader);
 
             Guid = context.GetMetadataGuid(typeDef.GetCustomAttributes());
+            IsValueType = context.MetadataReader.IsValueType(typeDef);
             TypeAttributes = typeDef.Attributes;
             IsNested = typeDef.IsNested;
             context.TypesToBuild.Add(this);
@@ -180,7 +182,7 @@ namespace Win32InteropBuilder.Model
             }
         }
 
-        public virtual void ResolveNestedTypes(BuilderContext context, TypeDefinition typeDef)
+        protected virtual void ResolveNestedTypes(BuilderContext context, TypeDefinition typeDef)
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(context.MetadataReader);
@@ -214,7 +216,7 @@ namespace Win32InteropBuilder.Model
             }
         }
 
-        public virtual void ResolveMethods(BuilderContext context, TypeDefinition typeDef)
+        protected virtual void ResolveMethods(BuilderContext context, TypeDefinition typeDef)
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(context.MetadataReader);
@@ -280,7 +282,7 @@ namespace Win32InteropBuilder.Model
             }
         }
 
-        public virtual void ResolveInterfaces(BuilderContext context, TypeDefinition typeDef)
+        protected virtual void ResolveInterfaces(BuilderContext context, TypeDefinition typeDef)
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(context.MetadataReader);
@@ -301,7 +303,7 @@ namespace Win32InteropBuilder.Model
             }
         }
 
-        public virtual void ResolveFields(BuilderContext context, TypeDefinition typeDef)
+        protected virtual void ResolveFields(BuilderContext context, TypeDefinition typeDef)
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(context.MetadataReader);

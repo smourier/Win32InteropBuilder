@@ -16,7 +16,7 @@ namespace Win32InteropBuilder.Model
             }
         }
 
-        public override void ResolveType(BuilderContext context, TypeDefinition typeDef)
+        protected override internal void ResolveType(BuilderContext context, TypeDefinition typeDef)
         {
             base.ResolveType(context, typeDef);
 

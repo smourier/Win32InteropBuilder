@@ -100,7 +100,7 @@ namespace Win32InteropBuilder
             if (typeDef.Attributes.HasFlag(TypeAttributes.Interface))
                 return CreateInterfaceType(fn);
 
-            var isStructure = MetadataReader.IsStructure(typeDef);
+            var isStructure = MetadataReader.IsValueType(typeDef);
             if (isStructure)
                 return CreateStructureType(fn);
 

@@ -251,7 +251,7 @@ namespace Win32InteropBuilder.Model
             return sig.FullName == FullName.SystemIntPtr;
         }
 
-        public static bool IsStructure(this MetadataReader reader, TypeDefinition type)
+        public static bool IsValueType(this MetadataReader reader, TypeDefinition type)
         {
             ArgumentNullException.ThrowIfNull(reader);
             if (!type.Attributes.HasFlag(TypeAttributes.Public) && !type.Attributes.HasFlag(TypeAttributes.NestedPublic))

@@ -19,7 +19,7 @@ namespace Win32InteropBuilder.Model
         public virtual bool IsFlags { get; set; }
         public virtual BuilderType? UnderlyingType { get; set; }
 
-        public override void ResolveType(BuilderContext context, TypeDefinition typeDef)
+        protected override internal void ResolveType(BuilderContext context, TypeDefinition typeDef)
         {
             base.ResolveType(context, typeDef);
             IsFlags = context.MetadataReader!.IsEnumFlags(typeDef.GetCustomAttributes());
@@ -35,7 +35,7 @@ namespace Win32InteropBuilder.Model
             }
         }
 
-        public override void ResolveFields(BuilderContext context, TypeDefinition typeDef)
+        protected override void ResolveFields(BuilderContext context, TypeDefinition typeDef)
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(context.MetadataReader);

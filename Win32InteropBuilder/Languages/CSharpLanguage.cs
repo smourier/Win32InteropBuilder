@@ -351,18 +351,29 @@ namespace Win32InteropBuilder.Languages
             }
 
             var ns = type.FullName.NestedName;
+            string strucTypeName;
             if (ns != null)
             {
-                context.CurrentWriter.Write($"public struct {GetIdentifier(ns)}");
+                strucTypeName = GetIdentifier(ns);
+                context.CurrentWriter.Write($"public struct {strucTypeName}");
             }
             else
             {
-                context.CurrentWriter.Write($"public partial struct {GetIdentifier(type.GetGeneratedName(context))}");
+                strucTypeName = GetIdentifier(type.GetGeneratedName(context));
+                context.CurrentWriter.Write($"public partial struct {strucTypeName}");
             }
 
             context.CurrentWriter.WriteLine();
             context.CurrentWriter.WithParens(() =>
             {
+                if (context.Configuration.Generation.AddNullToIntPtrValueTypes &&
+                    type.Fields.Count == 1 &&
+                    (type.Fields[0].Type == WellKnownTypes.SystemIntPtr || type.Fields[0].Type == WellKnownTypes.SystemUIntPtr))
+                {
+                    context.CurrentWriter.WriteLine($"public static readonly {strucTypeName} Null = new();");
+                    context.CurrentWriter.WriteLine();
+                }
+
                 for (var i = 0; i < type.NestedTypes.Count; i++)
                 {
                     var nt = type.NestedTypes[i];
@@ -826,6 +837,13 @@ namespace Win32InteropBuilder.Languages
             {
                 def.Direction += " ";
             }
+
+            var isOptional = parameter.Attributes.HasFlag(ParameterAttributes.Optional);
+            if (isOptional && def.TypeName != "nint")
+            {
+                def.TypeName += "?";
+            }
+
             context.CurrentWriter.Write($"{def.MarshalAs}{def.MarshalUsing}{def.Direction}{def.TypeName}{def.Comments} {GetIdentifier(parameter.Name)}");
         }
 
