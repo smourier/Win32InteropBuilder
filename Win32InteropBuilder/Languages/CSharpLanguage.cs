@@ -800,6 +800,11 @@ namespace Win32InteropBuilder.Languages
                 }
             }
 
+            if (def.Direction == "out" && def.TypeName == "object" && (def.MarshalUsing == null && def.MarshalAs == null))
+            {
+                def.TypeName = "nint";
+            }
+
             return context.GetParameterDef(parameter, def);
         }
 
