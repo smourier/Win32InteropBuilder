@@ -20,7 +20,17 @@ namespace Win32InteropBuilder.Model
         public virtual string? ImportEntryPoint { get; set; }
         public virtual string? ImportModuleName { get; set; }
 
-        internal void SortParameters() => _parameters.Sort();
+        public virtual void SortAndResolveParameters()
+        {
+            _parameters.Sort();
+            foreach (var parameter in _parameters)
+            {
+                if (parameter.NativeArray?.CountParamIndex >= 0)
+                {
+                    parameter.NativeArray.CountParameter = _parameters[(int)parameter.NativeArray?.CountParamIndex.Value!];
+                }
+            }
+        }
 
         int IComparable.CompareTo(object? obj) => CompareTo(obj as BuilderMethod);
         public int CompareTo(BuilderMethod? other)

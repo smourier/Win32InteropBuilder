@@ -255,11 +255,13 @@ namespace Win32InteropBuilder.Model
                         continue;
 
                     parameter.Attributes = parameterDef.Attributes;
-                    parameter.IsComOutPtr = context.MetadataReader.IsComOutPtr(parameterDef.GetCustomAttributes());
-                    parameter.IsConst = context.MetadataReader.IsConst(parameterDef.GetCustomAttributes());
+                    var ca = parameterDef.GetCustomAttributes();
+                    parameter.IsComOutPtr = context.MetadataReader.IsComOutPtr(ca);
+                    parameter.IsConst = context.MetadataReader.IsConst(ca);
+                    parameter.NativeArray = context.GetNativeArray(ca);
                     method.Parameters.Add(parameter);
                 }
-                method.SortParameters();
+                method.SortAndResolveParameters();
 
                 var dec = methodDef.DecodeSignature(context.SignatureTypeProvider, null);
                 method.ReturnType = dec.ReturnType;

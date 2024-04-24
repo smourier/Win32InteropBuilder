@@ -28,6 +28,7 @@ namespace Win32InteropBuilder.Model
         public static FullName GuidAttribute { get; } = new("Windows.Win32.Foundation.Metadata.GuidAttribute");
         public static FullName AnsiAttribute { get; } = new("Windows.Win32.Foundation.Metadata.AnsiAttribute");
         public static FullName UnicodeAttribute { get; } = new("Windows.Win32.Foundation.Metadata.UnicodeAttribute");
+        public static FullName NativeArrayInfoAttribute { get; } = new("Windows.Win32.Foundation.Metadata.NativeArrayInfoAttribute");
         public static FullName UnmanagedFunctionPointerAttribute { get; } = new(typeof(UnmanagedFunctionPointerAttribute));
         public static FullName MulticastDelegate { get; } = new(typeof(MulticastDelegate));
         public static FullName FlagsAttribute { get; } = new(typeof(FlagsAttribute));

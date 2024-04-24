@@ -19,6 +19,9 @@ namespace Win32InteropBuilder.Languages
         public CSharpLanguageConfiguration Configuration { get; private set; } = new();
         public IReadOnlyCollection<FullName> ConstableTypes => _constableTypes;
 
+        private const string IntPtrTypeName = "nint";
+        private const string UIntPtrTypeName = "nuint";
+
         public override string ToString() => Name;
         public virtual void Configure(JsonElement element)
         {
@@ -410,14 +413,14 @@ namespace Win32InteropBuilder.Languages
 
                     if (mapped is InterfaceType || mapped is DelegateType)
                     {
-                        context.CurrentWriter.Write($"public nint {GetIdentifier(field.Name)};");
+                        context.CurrentWriter.Write($"public {IntPtrTypeName} {GetIdentifier(field.Name)};");
                     }
                     else
                     {
                         var typeName = GetTypeReferenceName(mapped.GetGeneratedName(context));
                         if (mapped.Indirections > 0)
                         {
-                            typeName = "nint";
+                            typeName = IntPtrTypeName;
                         }
                         context.CurrentWriter.Write($"public {typeName} {GetIdentifier(field.Name)};");
                     }
@@ -454,7 +457,7 @@ namespace Win32InteropBuilder.Languages
 
                     if (mapped is InterfaceType)
                     {
-                        typeName = "nint";
+                        typeName = IntPtrTypeName;
                     }
                     else
                     {
@@ -659,7 +662,7 @@ namespace Win32InteropBuilder.Languages
             string? comments = null;
             foreach (var iface in type.AllInterfaces)
             {
-                var existing = iface.Methods.FirstOrDefault(m => HaveSameSignature(context, m, method));
+                var existing = iface.Methods.FirstOrDefault(m => HaveSameSignature(context, type, m, method));
                 if (existing != null)
                 {
                     methodName = type.FullName.Name + "_" + methodName;
@@ -685,9 +688,10 @@ namespace Win32InteropBuilder.Languages
             context.CurrentWriter.WriteLine($");{comments}");
         }
 
-        protected virtual bool HaveSameSignature(BuilderContext context, BuilderMethod method1, BuilderMethod method2)
+        protected virtual bool HaveSameSignature(BuilderContext context, BuilderType type, BuilderMethod method1, BuilderMethod method2)
         {
             ArgumentNullException.ThrowIfNull(context);
+            ArgumentNullException.ThrowIfNull(type);
             ArgumentNullException.ThrowIfNull(method1);
             ArgumentNullException.ThrowIfNull(method2);
             if (method1 == method2)
@@ -702,35 +706,53 @@ namespace Win32InteropBuilder.Languages
             for (var i = 0; i < method1.Parameters.Count; i++)
             {
                 // hope context are similar
-                var def1 = GetParameterDef(context, method1.Parameters[i]);
-                var def2 = GetParameterDef(context, method2.Parameters[i]);
+                var def1 = GetParameterDef(context, type, method1.Parameters[i]);
+                var def2 = GetParameterDef(context, type, method2.Parameters[i]);
                 if (def1.TypeName != def2.TypeName || def1.Direction != def2.Direction)
                     return false;
             }
             return true;
         }
 
-        protected virtual ParameterDef GetParameterDef(BuilderContext context, BuilderParameter parameter)
+        protected virtual ParameterDef GetParameterDef(BuilderContext context, BuilderType type, BuilderParameter parameter)
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(parameter);
+            ArgumentNullException.ThrowIfNull(type);
             if (parameter.Type == null)
                 throw new InvalidOperationException();
+
+            if (parameter.Name == "iids")
+            {
+            }
 
             var def = new ParameterDef();
             var mapped = context.MapType(parameter.Type);
             def.TypeName = GetTypeReferenceName(mapped.GetGeneratedName(context));
-            def.IsComOutPtr = parameter.IsComOutPtr && (parameter.Type == WellKnownTypes.SystemVoid || parameter.Type == WellKnownTypes.SystemObject);
-            if (def.IsComOutPtr)
+            var isUnknownComOutPtr = parameter.IsComOutPtr && (parameter.Type == WellKnownTypes.SystemVoid || parameter.Type == WellKnownTypes.SystemObject);
+            if (isUnknownComOutPtr)
             {
                 var copTarget = context.Configuration.Generation.ComOutPtrTarget;
                 switch (copTarget)
                 {
                     case ComOutPtrTarget.Object:
-                        return context.GetParameterDef(parameter, new ParameterDef { IsComOutPtr = true, Direction = "out", TypeName = "object", MarshalAs = UnmanagedType.Interface.ToString(), Comments = $" /* {def.TypeName} */" });
+                        return context.GetParameterDef(parameter, new ParameterDef
+                        {
+                            Direction = ParameterDirection.Out,
+                            TypeName = "object",
+                            MarshalAs = new ParameterMarshalAs { UnmanagedType = UnmanagedType.Interface },
+                            Comments = $" /* {def.TypeName} */"
+                        });
 
                     case ComOutPtrTarget.UniqueObject:
-                        return context.GetParameterDef(parameter, new ParameterDef { IsComOutPtr = true, Direction = "out", TypeName = "object", MarshalUsing = "typeof(UniqueComInterfaceMarshaller<object>)", Comments = $" /* {def.TypeName} */" });
+                        return context.GetParameterDef(parameter, new ParameterDef
+                        {
+                            Direction =
+                            ParameterDirection.Out,
+                            TypeName = "object",
+                            MarshalUsing = new ParameterMarshalUsing { TypeName = "UniqueComInterfaceMarshaller<object>" },
+                            Comments = $" /* {def.TypeName} */"
+                        });
 
                     // case ComOutPtrTarget.IntPtr
                     default:
@@ -738,71 +760,137 @@ namespace Win32InteropBuilder.Languages
                 }
             }
 
+            if (parameter.Attributes.HasFlag(ParameterAttributes.Out))
+            {
+                if (parameter.Attributes.HasFlag(ParameterAttributes.In))
+                {
+                    def.Direction = ParameterDirection.Ref;
+                }
+                else
+                {
+                    def.Direction = ParameterDirection.Out;
+                }
+            }
+
             if (parameter.UnmanagedType.HasValue)
             {
-                def.MarshalAs = parameter.UnmanagedType.Value.ToString();
+                def.MarshalAs = new ParameterMarshalAs { UnmanagedType = parameter.UnmanagedType.Value };
             }
             else if (mapped.UnmanagedType.HasValue)
             {
-                def.MarshalAs = mapped.UnmanagedType.Value.ToString();
+                def.MarshalAs = new ParameterMarshalAs { UnmanagedType = mapped.UnmanagedType.Value };
+            }
+
+            if (!def.Direction.HasValue && mapped.Indirections > 0 && def.TypeName != IntPtrTypeName && def.TypeName != UIntPtrTypeName)
+            {
+                def.Direction = ParameterDirection.In;
+            }
+
+            var optionalPtr = parameter.Attributes.HasFlag(ParameterAttributes.Optional) & parameter.Type.Indirections > 0;
+            if (optionalPtr)
+            {
+                def.Comments = $" /* optional {def.TypeName}{new string('*', parameter.Type.Indirections)} */";
+                def.TypeName = IntPtrTypeName;
+                def.MarshalAs = null;
+                def.Direction = null;
+                return context.GetParameterDef(parameter, def);
+            }
+
+            if (def.TypeName == "void" && mapped.Indirections > 0)
+            {
+                def.TypeName = IntPtrTypeName;
+                def.MarshalAs = null;
+                if (mapped.Indirections == 1)
+                {
+                    def.Direction = null;
+                }
+                else
+                {
+                    def.Direction = ParameterDirection.Out;
+                }
+                return context.GetParameterDef(parameter, def);
             }
 
             if (def.TypeName == "byte" && parameter.Type.Indirections > 0)
             {
-                def.TypeName = "nint";
+                def.TypeName = IntPtrTypeName;
                 def.Comments = " /* byte array */";
                 def.MarshalAs = null;
-                if (parameter.Type.Indirections > 1)
+                if (parameter.Type.Indirections == 1)
                 {
-                    def.Direction = "out";
-                }
-            }
-            else
-            {
-                var optionalPtr = parameter.Attributes.HasFlag(ParameterAttributes.Optional) & parameter.Type.Indirections > 0;
-                if (optionalPtr)
-                {
-                    def.Comments = $" /* optional {def.TypeName} */";
-                    def.TypeName = "nint";
-                    def.MarshalAs = null;
+                    def.Direction = null;
                 }
                 else
                 {
-                    if (parameter.Attributes.HasFlag(ParameterAttributes.Out))
-                    {
-                        if (parameter.Attributes.HasFlag(ParameterAttributes.In))
-                        {
-                            def.Direction = "ref";
-                        }
-                        else
-                        {
-                            def.Direction = "out";
-                        }
-                    }
-                    else if (mapped.Indirections > 0 && def.TypeName != "nint")
-                    {
-                        def.Direction = "in";
-                    }
-
-                    if (def.TypeName == "void" && mapped.Indirections > 0)
-                    {
-                        def.TypeName = "nint";
-                        def.MarshalAs = null;
-                        if (mapped.Indirections == 1)
-                        {
-                            def.Direction = null;
-                        }
-                        else
-                        {
-                            def.Direction = "out";
-                        }
-                    }
+                    def.Direction = ParameterDirection.Out;
                 }
+                return context.GetParameterDef(parameter, def);
             }
 
-            if (def.Direction == "out" && def.TypeName == "object" && (def.MarshalUsing == null && def.MarshalAs == null))
+            // there are currently big limits to delegate marshaling
+            if (type is DelegateType)
             {
-                def.TypeName = "nint";
+                if (def.Direction.HasValue || parameter.Type is InterfaceType || parameter.Type is DelegateType)
+                {
+                    if (def.Direction.HasValue)
+                    {
+                        def.Comments = $" /* {def.Direction.Value.ToString().ToLowerInvariant()} {def.TypeName} */";
+                    }
+                    else
+                    {
+                        def.Comments = $" /* {def.TypeName} */";
+                    }
+                    def.Direction = null;
+                    def.TypeName = IntPtrTypeName;
+                }
+                return context.GetParameterDef(parameter, def);
+            }
+
+            if (parameter.NativeArray != null)
+            {
+                def.MarshalAs = null;
+                // see https://github.com/dotnet/runtime/discussions/101494
+                if (def.TypeName == "bool")
+                {
+                    def.TypeName = "int";
+                }
+                def.TypeName += "[]";
+                if (parameter.NativeArray.CountParameter != null)
+                {
+                    def.MarshalUsing = new ParameterMarshalUsing { CountElementName = parameter.NativeArray.CountParameter.Name };
+                }
+                else if (parameter.NativeArray.CountConst.HasValue)
+                {
+                    def.MarshalUsing = new ParameterMarshalUsing { ConstantElementCount = parameter.NativeArray.CountConst.Value };
+                }
+                else
+                {
+                    if (def.Direction == ParameterDirection.Out)
+                    {
+                        def.TypeName = IntPtrTypeName;
+                    }
+                    else
+                        throw new NotSupportedException();
+                }
+                return context.GetParameterDef(parameter, def);
+            }
+
+            if (def.Direction == ParameterDirection.Out && def.TypeName == "object" && def.MarshalUsing == null && def.MarshalAs == null)
+            {
+                def.TypeName = IntPtrTypeName;
+                return context.GetParameterDef(parameter, def);
+            }
+
+            if (def.Direction == ParameterDirection.Out && parameter.Type.Indirections > 1)
+            {
+                def.TypeName = IntPtrTypeName;
+                return context.GetParameterDef(parameter, def);
+            }
+
+            var isOptional = parameter.Attributes.HasFlag(ParameterAttributes.Optional);
+            if (isOptional && def.TypeName != IntPtrTypeName)
+            {
+                def.TypeName += "?";
             }
 
             return context.GetParameterDef(parameter, def);
@@ -817,39 +905,42 @@ namespace Win32InteropBuilder.Languages
             if (parameter.Type == null)
                 throw new InvalidOperationException();
 
-            var def = GetParameterDef(context, parameter);
-            if (type is DelegateType)
-            {
-                // there are currently big limits to delegate marshaling
-                if (def.Direction != null || parameter.Type is InterfaceType || parameter.Type is DelegateType)
-                {
-                    def.Comments = $" /* {def.Direction} {def.TypeName} */";
-                    def.Direction = null;
-                    def.TypeName = "nint";
-                }
-            }
+            var def = GetParameterDef(context, type, parameter);
 
+            string? marshalAs = null;
+            string? marshalUsing = null;
             if (def.MarshalAs != null)
             {
-                def.MarshalAs = $"[MarshalAs(UnmanagedType.{def.MarshalAs})] ";
+                marshalAs = $"[MarshalAs(UnmanagedType.{def.MarshalAs.UnmanagedType})] ";
             }
             else if (def.MarshalUsing != null)
             {
-                def.MarshalUsing = $"[MarshalUsing({def.MarshalUsing})] ";
+                var dic = new Dictionary<string, object>();
+                if (def.MarshalUsing.TypeName != null)
+                {
+                    dic.Add(string.Empty, $"typeof({def.MarshalUsing.TypeName})");
+                }
+
+                if (def.MarshalUsing.CountElementName != null)
+                {
+                    dic.Add(nameof(def.MarshalUsing.CountElementName), $"nameof({def.MarshalUsing.CountElementName})");
+                }
+
+                if (def.MarshalUsing.ConstantElementCount.HasValue)
+                {
+                    dic.Add(nameof(def.MarshalUsing.ConstantElementCount), def.MarshalUsing.ConstantElementCount.Value);
+                }
+
+                marshalUsing = $"[MarshalUsing({string.Join(", ", dic.Select(kv => (kv.Key.Length > 0) ? (kv.Key + " = " + kv.Value) : kv.Value))})] ";
             }
 
+            string? direction = null;
             if (def.Direction != null)
             {
-                def.Direction += " ";
+                direction = def.Direction.Value.ToString().ToLowerInvariant() + " ";
             }
 
-            var isOptional = parameter.Attributes.HasFlag(ParameterAttributes.Optional);
-            if (isOptional && def.TypeName != "nint")
-            {
-                def.TypeName += "?";
-            }
-
-            context.CurrentWriter.Write($"{def.MarshalAs}{def.MarshalUsing}{def.Direction}{def.TypeName}{def.Comments} {GetIdentifier(parameter.Name)}");
+            context.CurrentWriter.Write($"{marshalAs}{marshalUsing}{direction}{def.TypeName}{def.Comments} {GetIdentifier(parameter.Name)}");
         }
 
         // https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/classes#154-constants

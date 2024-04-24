@@ -2,13 +2,12 @@
 {
     public class ParameterDef
     {
-        public virtual string? Direction { get; set; }
-        public virtual string? MarshalAs { get; set; }
-        public virtual string? MarshalUsing { get; set; }
+        public virtual ParameterDirection? Direction { get; set; }
+        public virtual ParameterMarshalAs? MarshalAs { get; set; }
+        public virtual ParameterMarshalUsing? MarshalUsing { get; set; }
         public virtual string? TypeName { get; set; }
         public virtual string? Comments { get; set; }
-        public virtual bool IsComOutPtr { get; set; }
 
-        public override string ToString() => $"{MarshalAs}{MarshalUsing}{Direction}{TypeName}{Comments}";
+        public override string ToString() => $"{MarshalAs} {MarshalUsing} {Direction} {TypeName} {Comments}";
     }
 }

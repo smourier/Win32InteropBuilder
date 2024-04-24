@@ -177,13 +177,15 @@ namespace Win32InteropBuilder
                         includedByMembers.Remove(type);
                         type.IncludedFields.Clear();
                         type.IncludedMethods.Clear();
-                        if (match.IsReverse)
+                        if (!match.IsReverse)
                         {
-                            excludes.Add(type);
+                            includes.Add(type);
+                            excludes.Remove(type);
                         }
                         else
                         {
-                            includes.Add(type);
+                            excludes.Add(type);
+                            includes.Remove(type);
                         }
                     }
                 }

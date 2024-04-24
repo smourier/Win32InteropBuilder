@@ -289,6 +289,36 @@ namespace Win32InteropBuilder.Model
             return !handle.IsNil;
         }
 
+        public static NativeArray? GetNativeArray(this BuilderContext context, CustomAttributeHandleCollection handles)
+        {
+            ArgumentNullException.ThrowIfNull(context);
+            ArgumentNullException.ThrowIfNull(context.MetadataReader);
+            var handle = handles.FirstOrDefault(h => context.MetadataReader.GetFullName(context.MetadataReader.GetCustomAttribute(h)) == FullName.NativeArrayInfoAttribute);
+            if (handle.IsNil)
+                return null;
+
+            var array = new NativeArray();
+            var value = GetValue(context, context.MetadataReader.GetCustomAttribute(handle));
+            foreach (var arg in value.NamedArguments)
+            {
+                switch (arg.Name)
+                {
+                    case nameof(NativeArray.CountConst):
+                        array.CountConst = (int)arg.Value!;
+                        break;
+
+                    case nameof(NativeArray.CountParamIndex):
+                        array.CountParamIndex = (short)arg.Value!;
+                        break;
+
+                    case nameof(NativeArray.CountFieldName):
+                        array.CountFieldName = (string)arg.Value!;
+                        break;
+                }
+            }
+            return array;
+        }
+
         public static bool IsFlexibleArray(this MetadataReader reader, CustomAttributeHandleCollection handles)
         {
             ArgumentNullException.ThrowIfNull(reader);
