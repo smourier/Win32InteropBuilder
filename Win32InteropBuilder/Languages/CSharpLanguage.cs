@@ -722,10 +722,6 @@ namespace Win32InteropBuilder.Languages
             if (parameter.Type == null)
                 throw new InvalidOperationException();
 
-            if (parameter.Name == "iids")
-            {
-            }
-
             var def = new ParameterDef();
             var mapped = context.MapType(parameter.Type);
             def.TypeName = GetTypeReferenceName(mapped.GetGeneratedName(context));

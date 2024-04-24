@@ -223,6 +223,9 @@ namespace Win32InteropBuilder.Model
 
             foreach (var handle in typeDef.GetMethods())
             {
+                if ((IncludedMethods.Count > 0 || IncludedFields.Count > 0) && !IncludedMethods.Contains(handle))
+                    continue;
+
                 var methodDef = context.MetadataReader.GetMethodDefinition(handle);
                 var method = context.CreateBuilderMethod(context.MetadataReader.GetString(methodDef.Name));
                 method.Handle = handle;
@@ -312,6 +315,9 @@ namespace Win32InteropBuilder.Model
 
             foreach (var handle in typeDef.GetFields())
             {
+                if ((IncludedMethods.Count > 0 || IncludedFields.Count > 0) && !IncludedFields.Contains(handle))
+                    continue;
+
                 var fieldDef = context.MetadataReader.GetFieldDefinition(handle);
                 var name = context.MetadataReader.GetString(fieldDef.Name);
                 var field = context.CreateBuilderField(name);
