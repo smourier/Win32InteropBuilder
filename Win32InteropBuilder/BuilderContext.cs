@@ -161,6 +161,12 @@ namespace Win32InteropBuilder
             return Language.ConstableTypes.Contains(type.FullName);
         }
 
+        public virtual string GetValueAsString(BuilderType type, object? value, string defaultValueAsString)
+        {
+            ArgumentNullException.ThrowIfNull(type);
+            return defaultValueAsString;
+        }
+
         public virtual string GetConstantValue(BuilderType type, Model.Constant constant)
         {
             ArgumentNullException.ThrowIfNull(type);

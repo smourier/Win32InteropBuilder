@@ -54,6 +54,12 @@ namespace Win32InteropBuilder.Languages
 
         public virtual string GetValueAsString(BuilderContext context, BuilderType type, object? value)
         {
+            var valueAsString = GetDefaultValueAsString(context, type, value);
+            return context.GetValueAsString(type, value, valueAsString);
+        }
+
+        protected virtual string GetDefaultValueAsString(BuilderContext context, BuilderType type, object? value)
+        {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(type);
             if (value == null)
@@ -213,6 +219,12 @@ namespace Win32InteropBuilder.Languages
             context.CurrentWriter.WriteLine($"namespace {ns};");
             context.CurrentWriter.WriteLine();
             context.CurrentNamespace = ns;
+
+            //var typeName = GetIdentifier(type.GetGeneratedName(context));
+            //if (typeName != type.FullName.ToString())
+            //{
+            //    context.CurrentWriter.WriteLine("// " + type.FullName);
+            //}
 
             if (type.Documentation != null)
             {
@@ -705,7 +717,7 @@ namespace Win32InteropBuilder.Languages
 
             for (var i = 0; i < method1.Parameters.Count; i++)
             {
-                // hope context are similar
+                // hopefully context are similar
                 var def1 = GetParameterDef(context, type, method1.Parameters[i]);
                 var def2 = GetParameterDef(context, type, method2.Parameters[i]);
                 if (def1.TypeName != def2.TypeName || def1.Direction != def2.Direction)
@@ -850,14 +862,25 @@ namespace Win32InteropBuilder.Languages
                 {
                     def.TypeName = "int";
                 }
+
                 def.TypeName += "[]";
                 if (parameter.NativeArray.CountParameter != null)
                 {
                     def.MarshalUsing = new ParameterMarshalUsing { CountElementName = parameter.NativeArray.CountParameter.Name };
+                    if (!def.Direction.HasValue)
+                    {
+                        def.IsOut = true;
+                        def.IsIn = true;
+                    }
                 }
                 else if (parameter.NativeArray.CountConst.HasValue)
                 {
                     def.MarshalUsing = new ParameterMarshalUsing { ConstantElementCount = parameter.NativeArray.CountConst.Value };
+                    if (!def.Direction.HasValue)
+                    {
+                        def.IsOut = true;
+                        def.IsIn = true;
+                    }
                 }
                 else
                 {
@@ -903,6 +926,8 @@ namespace Win32InteropBuilder.Languages
 
             var def = GetParameterDef(context, type, parameter);
 
+            var inAtt = def.IsIn ? "[In]" : null;
+            var outAtt = def.IsOut ? "[Out]" : null;
             string? marshalAs = null;
             string? marshalUsing = null;
             if (def.MarshalAs != null)
@@ -936,7 +961,7 @@ namespace Win32InteropBuilder.Languages
                 direction = def.Direction.Value.ToString().ToLowerInvariant() + " ";
             }
 
-            context.CurrentWriter.Write($"{marshalAs}{marshalUsing}{direction}{def.TypeName}{def.Comments} {GetIdentifier(parameter.Name)}");
+            context.CurrentWriter.Write($"{inAtt}{outAtt}{marshalAs}{marshalUsing}{direction}{def.TypeName}{def.Comments} {GetIdentifier(parameter.Name)}");
         }
 
         // https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/classes#154-constants

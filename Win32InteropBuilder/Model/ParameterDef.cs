@@ -7,6 +7,8 @@
         public virtual ParameterMarshalUsing? MarshalUsing { get; set; }
         public virtual string? TypeName { get; set; }
         public virtual string? Comments { get; set; }
+        public virtual bool IsIn { get; set; }
+        public virtual bool IsOut { get; set; }
 
         public override string ToString() => $"{MarshalAs} {MarshalUsing} {Direction} {TypeName} {Comments}";
     }
