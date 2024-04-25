@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Win32InteropBuilder.Languages;
 using Win32InteropBuilder.Model;
 using Win32InteropBuilder.Utilities;
@@ -18,7 +19,7 @@ namespace Win32InteropBuilder
         {
             ReadCommentHandling = JsonCommentHandling.Skip,
             AllowTrailingCommas = true,
-            Converters = { new EncodingConverter() }
+            Converters = { new EncodingConverter(), new JsonStringEnumConverter() }
         };
 
         public static void Run(string configurationPath, string winMdPath, string outputDirectoryPath)
@@ -60,6 +61,24 @@ namespace Win32InteropBuilder
 
             var languageType = Type.GetType(configuration.Language.TypeName, true)!;
             var language = (ILanguage)Activator.CreateInstance(languageType)!;
+
+            if (!string.IsNullOrEmpty(configuration.PatchesFilePath))
+            {
+                var patchesPath = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(configurationPath)!, configuration.PatchesFilePath));
+                if (IOUtilities.PathIsFile(patchesPath))
+                {
+                    try
+                    {
+                        using var stream = File.OpenRead(patchesPath);
+                        configuration.Patches = JsonSerializer.Deserialize<BuilderPatches>(stream, JsonSerializerOptions);
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new EnumBasedException<Win32InteropBuilderExceptionCode>(Win32InteropBuilderExceptionCode.InvalidPatchesConfiguration, ex);
+                    }
+
+                }
+            }
 
             // reread file to configure per language
             using var stream2 = File.OpenRead(configurationPath);

@@ -313,6 +313,8 @@ namespace Win32InteropBuilder.Languages
                     }
                 }
 
+                var patch = context.Configuration.GetTypePatch(type);
+
                 // we're here mostly for functions.cs (if configured for unified namespace)
                 for (var i = 0; i < type.Methods.Count; i++)
                 {
@@ -326,7 +328,7 @@ namespace Win32InteropBuilder.Languages
                             continue;
                     }
 
-                    GenerateCode(context, type, method);
+                    GenerateCode(context, type, patch, method);
                     if (i != type.Methods.Count - 1)
                     {
                         context.CurrentWriter.WriteLine();
@@ -452,6 +454,8 @@ namespace Win32InteropBuilder.Languages
             ArgumentNullException.ThrowIfNull(context.CurrentWriter);
             ArgumentNullException.ThrowIfNull(type);
 
+            var patch = context.Configuration.GetTypePatch(type);
+
             // should be only 2 methods: ctor & invoke
             for (var i = 0; i < type.Methods.Count; i++)
             {
@@ -492,7 +496,8 @@ namespace Win32InteropBuilder.Languages
                         parameter.Attributes &= ~ParameterAttributes.Out;
                     }
 
-                    GenerateCode(context, type, parameter);
+                    var methodPatch = patch?.Methods?.FirstOrDefault(m => m.Matches(method));
+                    GenerateCode(context, type, method, methodPatch, parameter, j);
                     if (j != method.Parameters.Count - 1)
                     {
                         context.CurrentWriter.Write(", ");
@@ -551,10 +556,12 @@ namespace Win32InteropBuilder.Languages
             context.CurrentWriter.WriteLine();
             context.CurrentWriter.WithParens(() =>
             {
+                var patch = context.Configuration.GetTypePatch(type);
+
                 for (var i = 0; i < type.Methods.Count; i++)
                 {
                     var method = type.Methods[i];
-                    GenerateCode(context, type, method);
+                    GenerateCode(context, type, patch, method);
                     if (i != type.Methods.Count - 1)
                     {
                         context.CurrentWriter.WriteLine();
@@ -607,7 +614,7 @@ namespace Win32InteropBuilder.Languages
             });
         }
 
-        public virtual void GenerateCode(BuilderContext context, BuilderType type, BuilderMethod method)
+        public virtual void GenerateCode(BuilderContext context, BuilderType type, BuilderPatchType? patch, BuilderMethod method)
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(context.CurrentWriter);
@@ -687,11 +694,29 @@ namespace Win32InteropBuilder.Languages
             {
                 publicText = "public ";
             }
-            context.CurrentWriter.Write($"{publicText}{staticText}{GetTypeReferenceName(typeName)} {methodName}(");
+
+            typeName = GetTypeReferenceName(typeName);
+
+            // patch
+            var methodPatch = patch?.Methods?.FirstOrDefault(m => m.Matches(method));
+            if (methodPatch != null)
+            {
+                if (!string.IsNullOrEmpty(methodPatch.TypeName))
+                {
+                    typeName = methodPatch.TypeName;
+                }
+
+                if (!string.IsNullOrEmpty(methodPatch.NewName))
+                {
+                    methodName = methodPatch.NewName;
+                }
+            }
+
+            context.CurrentWriter.Write($"{publicText}{staticText}{typeName} {methodName}(");
             for (var j = 0; j < method.Parameters.Count; j++)
             {
                 var parameter = method.Parameters[j];
-                GenerateCode(context, type, parameter);
+                GenerateCode(context, type, method, methodPatch, parameter, j);
                 if (j != method.Parameters.Count - 1)
                 {
                     context.CurrentWriter.Write(", ");
@@ -856,11 +881,14 @@ namespace Win32InteropBuilder.Languages
 
             if (parameter.NativeArray != null)
             {
-                def.MarshalAs = null;
                 // see https://github.com/dotnet/runtime/discussions/101494
                 if (def.TypeName == "bool")
                 {
-                    def.TypeName = "int";
+                    def.MarshalAs = new ParameterMarshalAs { UnmanagedType = UnmanagedType.LPArray, ArraySubType = UnmanagedType.U4 };
+                }
+                else
+                {
+                    def.MarshalAs = null;
                 }
 
                 def.TypeName += "[]";
@@ -915,24 +943,36 @@ namespace Win32InteropBuilder.Languages
             return context.GetParameterDef(parameter, def);
         }
 
-        public virtual void GenerateCode(BuilderContext context, BuilderType type, BuilderParameter parameter)
+        public virtual void GenerateCode(BuilderContext context, BuilderType type, BuilderMethod method, BuilderPatchMember? methodPatch, BuilderParameter parameter, int parameterIndex)
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(context.CurrentWriter);
             ArgumentNullException.ThrowIfNull(type);
+            ArgumentNullException.ThrowIfNull(method);
             ArgumentNullException.ThrowIfNull(parameter);
             if (parameter.Type == null)
                 throw new InvalidOperationException();
 
             var def = GetParameterDef(context, type, parameter);
 
-            var inAtt = def.IsIn ? "[In]" : null;
-            var outAtt = def.IsOut ? "[Out]" : null;
+            var defPatch = methodPatch?.Parameters?.FirstOrDefault(p => p.Matches(parameter, parameterIndex))?.Def;
+            if (defPatch != null)
+            {
+                def.PatchFrom(defPatch);
+            }
+
+            var inAtt = def.IsIn == true ? "[In]" : null;
+            var outAtt = def.IsOut == true ? "[Out]" : null;
             string? marshalAs = null;
             string? marshalUsing = null;
             if (def.MarshalAs != null)
             {
-                marshalAs = $"[MarshalAs(UnmanagedType.{def.MarshalAs.UnmanagedType})] ";
+                marshalAs = $"[MarshalAs(UnmanagedType.{def.MarshalAs.UnmanagedType}";
+                if (def.MarshalAs.ArraySubType.HasValue)
+                {
+                    marshalAs += $", ArraySubType = UnmanagedType.{def.MarshalAs.ArraySubType}";
+                }
+                marshalAs += ")] ";
             }
             else if (def.MarshalUsing != null)
             {

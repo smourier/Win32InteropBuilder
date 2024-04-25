@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Win32InteropBuilder.Model;
 using Win32InteropBuilder.Utilities;
@@ -12,6 +13,8 @@ namespace Win32InteropBuilder
         public virtual string? BuilderTypeName { get; set; }
         public virtual string? WinMdPath { get; set; }
         public virtual string? OutputDirectoryPath { get; set; }
+        public virtual string? PatchesFilePath { get; set; } = "Patches.json";
+        public virtual BuilderPatches? Patches { get; set; }
         public virtual bool DeleteOutputDirectory { get; set; }
         public virtual bool GenerateFiles { get; set; } = true;
         public virtual Encoding? OutputEncoding { get; set; }
@@ -67,6 +70,14 @@ namespace Win32InteropBuilder
         {
             public virtual string? TypeFilePath { get; set; }
             public virtual string? TypeName { get; set; }
+        }
+
+        internal BuilderPatchType? GetTypePatch(BuilderType type)
+        {
+            if (Patches == null)
+                return null;
+
+            return Patches.Types?.FirstOrDefault(t => t.Matches(type));
         }
 
         internal BuilderGeneration.UnifiedGeneration? GetUnifiedGeneration()
