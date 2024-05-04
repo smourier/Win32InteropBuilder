@@ -1,6 +1,7 @@
 ﻿using System;
 using System.CodeDom.Compiler;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Metadata;
@@ -356,6 +357,59 @@ namespace Win32InteropBuilder.Model
             action();
             writer.Indent--;
             writer.WriteLine('}');
+        }
+
+        public static void SetExtendedValue(this IExtensible extensible, string name, object? value)
+        {
+            ArgumentNullException.ThrowIfNull(name);
+            ArgumentNullException.ThrowIfNull(extensible);
+            ArgumentNullException.ThrowIfNull(extensible.Properties);
+            extensible.Properties[name] = value;
+        }
+
+        public static bool TryGetExtendedValue(this IExtensible extensible, string name, out object? value)
+        {
+            ArgumentNullException.ThrowIfNull(name);
+            var properties = extensible?.Properties;
+            if (properties == null)
+            {
+                value = null;
+                return false;
+            }
+
+            return properties.TryGetValue(name, out value);
+        }
+
+        public static bool TryGetExtendedValue<T>(this IExtensible extensible, string name, out T? value)
+        {
+            ArgumentNullException.ThrowIfNull(name);
+            var properties = extensible?.Properties;
+            if (properties == null)
+            {
+                value = default;
+                return false;
+            }
+
+            if (!properties.TryGetValue(name, out var v))
+            {
+                value = default;
+                return false;
+            }
+
+            return Conversions.TryChangeType(v, CultureInfo.InvariantCulture, out value);
+        }
+
+        public static T? GetExtendedValue<T>(this IExtensible extensible, string name, T? defaultValue = default)
+        {
+            ArgumentNullException.ThrowIfNull(name);
+            var properties = extensible?.Properties;
+            if (properties == null)
+                return defaultValue;
+
+            if (!properties.TryGetValue(name, out var v))
+                return defaultValue;
+
+            return Conversions.ChangeType(v, defaultValue, CultureInfo.InvariantCulture);
         }
     }
 }

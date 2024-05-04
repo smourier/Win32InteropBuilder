@@ -35,11 +35,10 @@ namespace Win32InteropBuilder
         public virtual IDictionary<FullName, BuilderType> AllTypes { get; } = new Dictionary<FullName, BuilderType>();
         public virtual IDictionary<FullName, TypeDefinition> TypeDefinitions { get; } = new Dictionary<FullName, TypeDefinition>();
         public virtual IDictionary<FullName, BuilderType> MappedTypes { get; } = new Dictionary<FullName, BuilderType>();
+        public virtual IDictionary<FullName, BuilderTypeExtension> Extensions { get; } = new Dictionary<FullName, BuilderTypeExtension>();
         public virtual ISet<string> ImplicitNamespaces { get; } = new HashSet<string>();
-        public virtual ISet<string> ExistingFiles { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         public virtual ISet<BuilderType> TypesWithFunctions { get; } = new HashSet<BuilderType>();
         public virtual ISet<BuilderType> TypesWithConstants { get; } = new HashSet<BuilderType>();
-        public virtual HashSet<FullName> SupportedConstantTypes { get; } = [];
 
         // changing properties
         public virtual IndentedTextWriter? CurrentWriter { get; set; }

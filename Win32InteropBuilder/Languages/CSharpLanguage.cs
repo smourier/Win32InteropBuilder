@@ -52,7 +52,7 @@ namespace Win32InteropBuilder.Languages
             Configuration.ClearMarshalAsErrorTypeReverses();
         }
 
-        public virtual string GetValueAsString(BuilderContext context, BuilderType type, object? value)
+        protected virtual string GetValueAsString(BuilderContext context, BuilderType type, object? value)
         {
             var valueAsString = GetDefaultValueAsString(context, type, value);
             return context.GetValueAsString(type, value, valueAsString);
@@ -167,7 +167,7 @@ namespace Win32InteropBuilder.Languages
         }
 
         [return: NotNullIfNotNull(nameof(name))]
-        public virtual string? GetIdentifier(string? name)
+        protected virtual string? GetIdentifier(string? name)
         {
             if (name == null)
                 return null;
@@ -185,7 +185,7 @@ namespace Win32InteropBuilder.Languages
         }
 
         [return: NotNullIfNotNull(nameof(fullName))]
-        public virtual string GetTypeReferenceName(string fullName)
+        protected virtual string GetTypeReferenceName(string fullName)
         {
             ArgumentNullException.ThrowIfNull(fullName);
             if (Configuration.GenerateTypeKeywords && _typeKeywords.TryGetValue(fullName, out var keyword))
@@ -219,12 +219,6 @@ namespace Win32InteropBuilder.Languages
             context.CurrentWriter.WriteLine($"namespace {ns};");
             context.CurrentWriter.WriteLine();
             context.CurrentNamespace = ns;
-
-            //var typeName = GetIdentifier(type.GetGeneratedName(context));
-            //if (typeName != type.FullName.ToString())
-            //{
-            //    context.CurrentWriter.WriteLine("// " + type.FullName);
-            //}
 
             if (type.Documentation != null)
             {
@@ -448,7 +442,7 @@ namespace Win32InteropBuilder.Languages
             });
         }
 
-        public virtual void GenerateTypeCode(BuilderContext context, DelegateType type)
+        protected virtual void GenerateTypeCode(BuilderContext context, DelegateType type)
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(context.CurrentWriter);
@@ -512,7 +506,7 @@ namespace Win32InteropBuilder.Languages
             }
         }
 
-        public virtual void GenerateTypeCode(BuilderContext context, InlineArrayType type)
+        protected virtual void GenerateTypeCode(BuilderContext context, InlineArrayType type)
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(context.CurrentWriter);
@@ -614,7 +608,7 @@ namespace Win32InteropBuilder.Languages
             });
         }
 
-        public virtual void GenerateCode(BuilderContext context, BuilderType type, BuilderPatchType? patch, BuilderMethod method)
+        protected virtual void GenerateCode(BuilderContext context, BuilderType type, BuilderPatchType? patch, BuilderMethod method)
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(context.CurrentWriter);
@@ -649,7 +643,7 @@ namespace Win32InteropBuilder.Languages
             }
 
             context.CurrentWriter.WriteLine("[PreserveSig]");
-            string typeName;
+            string returnTypeName;
             if (method.ReturnType != null && method.ReturnType != WellKnownTypes.SystemVoid)
             {
                 var mapped = context.MapType(method.ReturnType);
@@ -664,11 +658,11 @@ namespace Win32InteropBuilder.Languages
                 {
                     context.CurrentWriter.WriteLine($"[return: MarshalAs(UnmanagedType.{um.Value})]");
                 }
-                typeName = GetTypeReferenceName(mapped.GetGeneratedName(context));
+                returnTypeName = GetTypeReferenceName(mapped.GetGeneratedName(context));
             }
             else
             {
-                typeName = "void";
+                returnTypeName = "void";
             }
 
             string? staticText = null;
@@ -695,7 +689,7 @@ namespace Win32InteropBuilder.Languages
                 publicText = "public ";
             }
 
-            typeName = GetTypeReferenceName(typeName);
+            returnTypeName = GetTypeReferenceName(returnTypeName);
 
             // patch
             var methodPatch = patch?.Methods?.FirstOrDefault(m => m.Matches(method));
@@ -703,7 +697,7 @@ namespace Win32InteropBuilder.Languages
             {
                 if (!string.IsNullOrEmpty(methodPatch.TypeName))
                 {
-                    typeName = methodPatch.TypeName;
+                    returnTypeName = methodPatch.TypeName;
                 }
 
                 if (!string.IsNullOrEmpty(methodPatch.NewName))
@@ -712,7 +706,10 @@ namespace Win32InteropBuilder.Languages
                 }
             }
 
-            context.CurrentWriter.Write($"{publicText}{staticText}{typeName} {methodName}(");
+            method.SetExtendedValue(nameof(returnTypeName), returnTypeName);
+            method.SetExtendedValue(nameof(methodName), methodName);
+
+            context.CurrentWriter.Write($"{publicText}{staticText}{returnTypeName} {methodName}(");
             for (var j = 0; j < method.Parameters.Count; j++)
             {
                 var parameter = method.Parameters[j];
@@ -943,7 +940,7 @@ namespace Win32InteropBuilder.Languages
             return context.GetParameterDef(parameter, def);
         }
 
-        public virtual void GenerateCode(BuilderContext context, BuilderType type, BuilderMethod method, BuilderPatchMember? methodPatch, BuilderParameter parameter, int parameterIndex)
+        protected virtual void GenerateCode(BuilderContext context, BuilderType type, BuilderMethod method, BuilderPatchMember? methodPatch, BuilderParameter parameter, int parameterIndex)
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(context.CurrentWriter);
@@ -1002,6 +999,101 @@ namespace Win32InteropBuilder.Languages
             }
 
             context.CurrentWriter.Write($"{inAtt}{outAtt}{marshalAs}{marshalUsing}{direction}{def.TypeName}{def.Comments} {GetIdentifier(parameter.Name)}");
+        }
+
+        public virtual void GenerateExtension(BuilderContext context, BuilderTypeExtension extension)
+        {
+            ArgumentNullException.ThrowIfNull(context);
+            ArgumentNullException.ThrowIfNull(context.CurrentWriter);
+            ArgumentNullException.ThrowIfNull(context.Configuration);
+            ArgumentNullException.ThrowIfNull(context.Configuration.Generation);
+            ArgumentNullException.ThrowIfNull(extension);
+            if (extension.RootType is not InterfaceType)
+                return;
+
+            var ns = context.MapGeneratedFullName(extension.RootType.FullName).Namespace;
+            ns = GetIdentifier(ns);
+            context.CurrentWriter.WriteLine($"namespace {ns};");
+            context.CurrentWriter.WriteLine();
+            context.CurrentNamespace = ns;
+
+            if (extension.RootType is InterfaceType interfaceType)
+            {
+                GenerateExtension(context, extension, interfaceType);
+            }
+
+            context.CurrentNamespace = null;
+        }
+
+        protected virtual void GenerateExtension(BuilderContext context, BuilderTypeExtension extension, InterfaceType interfaceType)
+        {
+            ArgumentNullException.ThrowIfNull(context);
+            ArgumentNullException.ThrowIfNull(context.CurrentWriter);
+            ArgumentNullException.ThrowIfNull(context.Configuration);
+            ArgumentNullException.ThrowIfNull(context.Configuration.Generation);
+            ArgumentNullException.ThrowIfNull(extension);
+            ArgumentNullException.ThrowIfNull(interfaceType);
+
+            //if (type.SupportedOSPlatform != null)
+            //{
+            //    context.CurrentWriter.WriteLine($"[SupportedOSPlatform(\"{type.SupportedOSPlatform}\")]");
+            //}
+
+            context.CurrentWriter.Write($"public static partial class {GetIdentifier(extension.GetGeneratedName(context))}");
+            context.CurrentWriter.WriteLine();
+            context.CurrentWriter.WithParens(() =>
+            {
+                var types = new List<InterfaceType>
+                {
+                    (InterfaceType)extension.RootType
+                };
+
+                types.AddRange(extension.Types.Cast<InterfaceType>().OrderBy(t => t, BuilderTypeHierarchyComparer.Instance));
+                foreach (var type in types)
+                {
+                    context.CurrentWriter.WriteLine("// " + type.FullName.Name);
+                    for (var i = 0; i < type.Methods.Count; i++)
+                    {
+                        var method = type.Methods[i];
+                        GenerateExtension(context, extension, type, method);
+                        if (i != type.Methods.Count - 1)
+                        {
+                            context.CurrentWriter.WriteLine();
+                        }
+                    }
+                }
+            });
+        }
+
+        protected virtual void GenerateExtension(BuilderContext context, BuilderTypeExtension extension, InterfaceType type, BuilderMethod method)
+        {
+            ArgumentNullException.ThrowIfNull(context);
+            ArgumentNullException.ThrowIfNull(context.CurrentWriter);
+            ArgumentNullException.ThrowIfNull(context.Configuration);
+            ArgumentNullException.ThrowIfNull(context.Configuration.Generation);
+            ArgumentNullException.ThrowIfNull(extension);
+            ArgumentNullException.ThrowIfNull(type);
+            ArgumentNullException.ThrowIfNull(method);
+
+            string returnTypeName;
+            returnTypeName = method.GetExtendedValue<string>(nameof(returnTypeName))!;
+
+            string methodName;
+            methodName = method.GetExtendedValue<string>(nameof(methodName))!;
+            context.CurrentWriter.Write($"public static {returnTypeName} {methodName}(");
+            for (var j = 0; j < method.Parameters.Count; j++)
+            {
+                var parameter = method.Parameters[j];
+                //GenerateCode(context, type, method, methodPatch, parameter, j);
+                if (j != method.Parameters.Count - 1)
+                {
+                    context.CurrentWriter.Write(", ");
+                }
+            }
+            context.CurrentWriter.WriteLine($")");
+            context.CurrentWriter.WithParens(() =>
+            {
+            });
         }
 
         // https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/classes#154-constants

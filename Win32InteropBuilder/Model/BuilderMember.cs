@@ -1,10 +1,13 @@
 ﻿using System;
-using Win32InteropBuilder.Utilities;
+using System.Collections.Generic;
 
 namespace Win32InteropBuilder.Model
 {
-    public class BuilderMember : IDocumentable, ISupportable, INameable
+    public class BuilderMember : IDocumentable, ISupportable, INameable, IExtensible
     {
+        private readonly Dictionary<string, object?> _properties = new(StringComparer.OrdinalIgnoreCase);
+        IDictionary<string, object?> IExtensible.Properties => _properties;
+
         public BuilderMember(string name)
         {
             ArgumentNullException.ThrowIfNull(name);

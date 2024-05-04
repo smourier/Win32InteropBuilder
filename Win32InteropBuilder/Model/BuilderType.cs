@@ -10,7 +10,7 @@ using Win32InteropBuilder.Utilities;
 
 namespace Win32InteropBuilder.Model
 {
-    public class BuilderType : IEquatable<BuilderType>, IDocumentable, ISupportable, IFullyNameable, IComparable, IComparable<BuilderType>
+    public class BuilderType : IEquatable<BuilderType>, IDocumentable, ISupportable, IFullyNameable, IComparable, IComparable<BuilderType>, IExtensible
     {
         public const string GeneratedInteropNamespace = "System.Runtime.InteropServices.InteropTypes";
 
@@ -23,6 +23,8 @@ namespace Win32InteropBuilder.Model
         private readonly HashSet<FieldDefinitionHandle> _includedFields = [];
         private readonly HashSet<FieldDefinitionHandle> _excludedFields = [];
         private string? _fileName;
+        private readonly Dictionary<string, object?> _properties = new(StringComparer.OrdinalIgnoreCase);
+        IDictionary<string, object?> IExtensible.Properties => _properties;
 
         public BuilderType(FullName fullName)
         {
@@ -413,7 +415,7 @@ namespace Win32InteropBuilder.Model
             _nestedTypes.Sort();
         }
 
-        public virtual void Generate(BuilderContext context)
+        public virtual string Generate(BuilderContext context)
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(context.Configuration);
@@ -442,17 +444,14 @@ namespace Win32InteropBuilder.Model
             {
                 var existingText = EncodingDetector.ReadAllText(typePath, context.Configuration.EncodingDetectorMode, out _);
                 if (text == existingText)
-                {
-                    context.ExistingFiles.Remove(typePath);
-                    return;
-                }
+                    return typePath;
             }
 
             IOUtilities.FileEnsureDirectory(typePath);
 
             context.LogVerbose(FullName + " => " + typePath);
             File.WriteAllText(typePath, text, context.Configuration.FinalOutputEncoding);
-            context.ExistingFiles.Remove(typePath);
+            return typePath;
         }
 
         public virtual void GenerateCode(BuilderContext context)

@@ -20,13 +20,12 @@ namespace InteropBuilder.Cli
             }
 
             var winMdPath = Path.Combine(Win32Metadata.WinMdPath, "Windows.Win32.winmd");
-            var outputDirectoryPath = Path.GetFullPath(CommandLine.Current.GetNullifiedArgument(1) ?? Path.GetFileNameWithoutExtension(configurationPath));
-            Builder.Run(configurationPath, winMdPath, outputDirectoryPath);
+            Builder.Run(configurationPath, winMdPath);
         }
 
         static void Help()
         {
-            Console.WriteLine(Assembly.GetEntryAssembly()!.GetName().Name!.ToUpperInvariant() + " <config.json> <outputDirectoryPath>");
+            Console.WriteLine(Assembly.GetEntryAssembly()!.GetName().Name!.ToUpperInvariant() + " <config.json>");
             Console.WriteLine();
             Console.WriteLine("Description:");
             Console.WriteLine("    This tool is used to generate Win32 interop .cs files from Microsoft.Windows.SDK.Win32Metadata.");

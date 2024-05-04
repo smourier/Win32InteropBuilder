@@ -1,11 +1,15 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
 namespace Win32InteropBuilder.Model
 {
-    public class BuilderParameter : IComparable, IComparable<BuilderParameter>, IDocumentable
+    public class BuilderParameter : IComparable, IComparable<BuilderParameter>, IDocumentable, IExtensible
     {
+        private readonly Dictionary<string, object?> _properties = new(StringComparer.OrdinalIgnoreCase);
+        IDictionary<string, object?> IExtensible.Properties => _properties;
+
         public BuilderParameter(string name, int sequenceNumber)
         {
             ArgumentNullException.ThrowIfNull(name);

@@ -22,11 +22,10 @@ namespace Win32InteropBuilder
             Converters = { new EncodingConverter(), new JsonStringEnumConverter() }
         };
 
-        public static void Run(string configurationPath, string winMdPath, string outputDirectoryPath)
+        public static void Run(string configurationPath, string winMdPath)
         {
             ArgumentNullException.ThrowIfNull(configurationPath);
             ArgumentNullException.ThrowIfNull(winMdPath);
-            ArgumentNullException.ThrowIfNull(outputDirectoryPath);
 
             BuilderConfiguration? configuration;
             try
@@ -54,7 +53,8 @@ namespace Win32InteropBuilder
             configuration.Language.TypeName ??= typeof(CSharpLanguage).AssemblyQualifiedName!;
             configuration.BuilderTypeName ??= typeof(Builder).AssemblyQualifiedName!;
             configuration.WinMdPath ??= winMdPath;
-            configuration.OutputDirectoryPath ??= outputDirectoryPath;
+            configuration.OutputDirectoryPath ??= Path.Combine(Path.GetDirectoryName(configurationPath).Nullify() ?? Path.GetFullPath("."), Path.GetFileNameWithoutExtension(configurationPath));
+            configuration.ExtensionsOutputDirectoryPath ??= Path.Combine(configuration.OutputDirectoryPath, "Extensions");
 
             var builderType = Type.GetType(configuration.BuilderTypeName, true)!;
             var builder = (Builder)Activator.CreateInstance(builderType)!;
@@ -123,6 +123,10 @@ namespace Win32InteropBuilder
             if (context.Configuration.GenerateFiles)
             {
                 GenerateTypes(context);
+                if (context.Configuration.GenerateExtensions)
+                {
+                    GenerateExtensions(context);
+                }
             }
         }
 
@@ -244,12 +248,6 @@ namespace Win32InteropBuilder
             ArgumentNullException.ThrowIfNull(context.Configuration.Generation);
 
             context.TypesToBuild.Remove(new BuilderType(FullName.IUnknown));
-
-            if (context.Configuration.Generation.HandleToIntPtr)
-            {
-                RemoveHandleTypes(context);
-                throw new NotSupportedException(); // yet
-            }
         }
 
         protected virtual void RemoveHandleTypes(BuilderContext context)
@@ -295,9 +293,10 @@ namespace Win32InteropBuilder
                 IOUtilities.DirectoryDelete(context.Configuration.OutputDirectoryPath, true);
             }
 
+            var existingFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             if (context.Configuration.RemoveNonGeneratedFiles && IOUtilities.PathIsDirectory(context.Configuration.OutputDirectoryPath))
             {
-                context.ExistingFiles.AddRange(Directory.EnumerateFileSystemEntries(context.Configuration.OutputDirectoryPath, "*.cs", SearchOption.AllDirectories));
+                existingFiles.AddRange(Directory.EnumerateFileSystemEntries(context.Configuration.OutputDirectoryPath, "*.cs", SearchOption.AllDirectories));
             }
 
             AddMappedTypes(context);
@@ -450,7 +449,11 @@ namespace Win32InteropBuilder
                 if (!finalType.IsGenerated)
                     continue;
 
-                finalType.Generate(context);
+                var typePath = finalType.Generate(context);
+                if (typePath != null)
+                {
+                    existingFiles.Remove(typePath);
+                }
             }
 
             if (un != null)
@@ -466,7 +469,11 @@ namespace Win32InteropBuilder
 
                     if (constantsType.IsGenerated)
                     {
-                        constantsType.Generate(context);
+                        var typePath = constantsType.Generate(context);
+                        if (typePath != null)
+                        {
+                            existingFiles.Remove(typePath);
+                        }
                     }
                 }
 
@@ -480,18 +487,62 @@ namespace Win32InteropBuilder
 
                     if (functionsType.IsGenerated)
                     {
-                        functionsType.Generate(context);
+                        var typePath = functionsType.Generate(context);
+                        if (typePath != null)
+                        {
+                            existingFiles.Remove(typePath);
+                        }
                     }
                 }
             }
 
             if (context.Configuration.RemoveNonGeneratedFiles)
             {
-                foreach (var filePath in context.ExistingFiles)
+                foreach (var filePath in existingFiles)
                 {
                     IOUtilities.FileDelete(filePath);
                 }
                 IOUtilities.DirectoryDeleteEmptySubDirectories(context.Configuration.OutputDirectoryPath);
+            }
+        }
+
+        protected virtual void GenerateExtensions(BuilderContext context)
+        {
+            ArgumentNullException.ThrowIfNull(context);
+            ArgumentNullException.ThrowIfNull(context.Configuration);
+            ArgumentNullException.ThrowIfNull(context.Configuration.Generation);
+            ArgumentNullException.ThrowIfNull(context.Configuration.ExtensionsOutputDirectoryPath);
+
+            if (context.Configuration.DeleteExtensionsOutputDirectory)
+            {
+                IOUtilities.DirectoryDelete(context.Configuration.ExtensionsOutputDirectoryPath, true);
+            }
+
+            var existingFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (context.Configuration.RemoveNonGeneratedFiles && IOUtilities.PathIsDirectory(context.Configuration.ExtensionsOutputDirectoryPath))
+            {
+                existingFiles.AddRange(Directory.EnumerateFileSystemEntries(context.Configuration.ExtensionsOutputDirectoryPath, "*.cs", SearchOption.AllDirectories));
+            }
+
+            foreach (var kv in context.Extensions.OrderBy(e => e.Key))
+            {
+                if (!kv.Value.IsGenerated)
+                    continue;
+
+                var typePath = kv.Value.Generate(context);
+                if (typePath != null)
+                {
+                    existingFiles.Remove(typePath);
+                }
+            }
+
+            if (context.Configuration.RemoveNonGeneratedFiles)
+            {
+                foreach (var filePath in existingFiles)
+                {
+                    IOUtilities.FileDelete(filePath);
+                }
+                IOUtilities.DirectoryDeleteEmptySubDirectories(context.Configuration.ExtensionsOutputDirectoryPath);
             }
         }
     }
