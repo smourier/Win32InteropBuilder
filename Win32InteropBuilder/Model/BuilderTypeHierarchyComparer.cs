@@ -16,7 +16,7 @@ namespace Win32InteropBuilder.Model
             if (x.Interfaces.Count == 0)
             {
                 if (y.Interfaces.Count == 0)
-                    return x.FullName.Name.CompareTo(y.FullName.Name);
+                    return x.Name.CompareTo(y.Name);
 
                 return -1;
             }
@@ -29,7 +29,7 @@ namespace Win32InteropBuilder.Model
             if (y.Interfaces.Contains(x))
                 return -1;
 
-            return x.FullName.Name.CompareTo(y.FullName.Name);
+            return x.Name.CompareTo(y.Name);
         }
     }
 }

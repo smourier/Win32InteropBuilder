@@ -40,6 +40,8 @@ namespace Win32InteropBuilder.Model
         }
 
         public FullName FullName { get; }
+        public string Name => FullName.Name;
+        public string Namespace => FullName.Namespace;
         public virtual BuilderType? BaseType { get; set; }
         public virtual BuilderTypeAttributes Attributes { get; set; }
         public virtual BuilderType? DeclaringType { get; set; }
@@ -371,10 +373,10 @@ namespace Win32InteropBuilder.Model
             var un = context.Configuration.GetUnifiedGeneration();
             if (WellKnownTypes.All.TryGetValue(FullName, out var type))
             {
-                if (context.ImplicitNamespaces.Contains(type.FullName.Namespace))
+                if (context.ImplicitNamespaces.Contains(type.Namespace))
                     return FullName.Name;
 
-                if (type.FullName.Namespace == context.CurrentNamespace)
+                if (type.Namespace == context.CurrentNamespace)
                     return type.FullName.Name;
 
                 if (un != null)
@@ -582,10 +584,10 @@ namespace Win32InteropBuilder.Model
         public int CompareTo(BuilderType? other)
         {
             ArgumentNullException.ThrowIfNull(other);
-            if (FullName.Namespace == other.FullName.Namespace)
+            if (FullName.Namespace == other.Namespace)
                 return FullName.Name.CompareTo(other.FullName.Name);
 
-            return FullName.Namespace.CompareTo(other.FullName.Namespace);
+            return FullName.Namespace.CompareTo(other.Namespace);
         }
 
         public static bool operator !=(BuilderType? obj1, BuilderType? obj2) => !(obj1 == obj2);

@@ -208,7 +208,7 @@ namespace Win32InteropBuilder.Languages
                 // it's not structure, interface or enum
                 // so it's not unified functions or constants
                 // so, don't map namespace
-                ns = type.FullName.Namespace;
+                ns = type.Namespace;
             }
             else
             {
@@ -678,7 +678,7 @@ namespace Win32InteropBuilder.Languages
                 var existing = iface.Methods.FirstOrDefault(m => HaveSameSignature(context, type, m, method));
                 if (existing != null)
                 {
-                    methodName = type.FullName.Name + "_" + methodName;
+                    methodName = type.Name + "_" + methodName;
                     comments = " // renamed, see https://github.com/dotnet/runtime/issues/101240";
                 }
             }
@@ -1051,7 +1051,7 @@ namespace Win32InteropBuilder.Languages
                 types.AddRange(extension.Types.Cast<InterfaceType>().OrderBy(t => t, BuilderTypeHierarchyComparer.Instance));
                 foreach (var type in types)
                 {
-                    context.CurrentWriter.WriteLine("// " + type.FullName.Name);
+                    context.CurrentWriter.WriteLine("// " + type.Name);
                     for (var i = 0; i < type.Methods.Count; i++)
                     {
                         var method = type.Methods[i];
@@ -1118,41 +1118,41 @@ namespace Win32InteropBuilder.Languages
         private static readonly ConcurrentDictionary<string, string> _typeKeywords = new()
         {
             [WellKnownTypes.SystemBoolean.FullName.ToString()] = "bool",
-            [WellKnownTypes.SystemBoolean.FullName.Name] = "bool",
+            [WellKnownTypes.SystemBoolean.Name] = "bool",
             [WellKnownTypes.SystemByte.FullName.ToString()] = "byte",
-            [WellKnownTypes.SystemByte.FullName.Name] = "byte",
+            [WellKnownTypes.SystemByte.Name] = "byte",
             [WellKnownTypes.SystemChar.FullName.ToString()] = "char",
-            [WellKnownTypes.SystemChar.FullName.Name] = "char",
+            [WellKnownTypes.SystemChar.Name] = "char",
             [WellKnownTypes.SystemDouble.FullName.ToString()] = "double",
-            [WellKnownTypes.SystemDouble.FullName.Name] = "double",
+            [WellKnownTypes.SystemDouble.Name] = "double",
             [WellKnownTypes.SystemDecimal.FullName.ToString()] = "decimal",
-            [WellKnownTypes.SystemDecimal.FullName.Name] = "decimal",
+            [WellKnownTypes.SystemDecimal.Name] = "decimal",
             [WellKnownTypes.SystemInt16.FullName.ToString()] = "short",
-            [WellKnownTypes.SystemInt16.FullName.Name] = "short",
+            [WellKnownTypes.SystemInt16.Name] = "short",
             [WellKnownTypes.SystemInt32.FullName.ToString()] = "int",
-            [WellKnownTypes.SystemInt32.FullName.Name] = "int",
+            [WellKnownTypes.SystemInt32.Name] = "int",
             [WellKnownTypes.SystemInt64.FullName.ToString()] = "long",
-            [WellKnownTypes.SystemInt64.FullName.Name] = "long",
+            [WellKnownTypes.SystemInt64.Name] = "long",
             [WellKnownTypes.SystemIntPtr.FullName.ToString()] = "nint",
-            [WellKnownTypes.SystemIntPtr.FullName.Name] = "nint",
+            [WellKnownTypes.SystemIntPtr.Name] = "nint",
             [WellKnownTypes.SystemObject.FullName.ToString()] = "object",
-            [WellKnownTypes.SystemObject.FullName.Name] = "object",
+            [WellKnownTypes.SystemObject.Name] = "object",
             [WellKnownTypes.SystemSByte.FullName.ToString()] = "sbyte",
-            [WellKnownTypes.SystemSByte.FullName.Name] = "sbyte",
+            [WellKnownTypes.SystemSByte.Name] = "sbyte",
             [WellKnownTypes.SystemSingle.FullName.ToString()] = "float",
-            [WellKnownTypes.SystemSingle.FullName.Name] = "float",
+            [WellKnownTypes.SystemSingle.Name] = "float",
             [WellKnownTypes.SystemString.FullName.ToString()] = "string",
-            [WellKnownTypes.SystemString.FullName.Name] = "string",
+            [WellKnownTypes.SystemString.Name] = "string",
             [WellKnownTypes.SystemUInt16.FullName.ToString()] = "ushort",
-            [WellKnownTypes.SystemUInt16.FullName.Name] = "ushort",
+            [WellKnownTypes.SystemUInt16.Name] = "ushort",
             [WellKnownTypes.SystemUInt32.FullName.ToString()] = "uint",
-            [WellKnownTypes.SystemUInt32.FullName.Name] = "uint",
+            [WellKnownTypes.SystemUInt32.Name] = "uint",
             [WellKnownTypes.SystemUInt64.FullName.ToString()] = "ulong",
-            [WellKnownTypes.SystemUInt64.FullName.Name] = "ulong",
+            [WellKnownTypes.SystemUInt64.Name] = "ulong",
             [WellKnownTypes.SystemUIntPtr.FullName.ToString()] = "nuint",
-            [WellKnownTypes.SystemUIntPtr.FullName.Name] = "nuint",
+            [WellKnownTypes.SystemUIntPtr.Name] = "nuint",
             [WellKnownTypes.SystemVoid.FullName.ToString()] = "void",
-            [WellKnownTypes.SystemVoid.FullName.Name] = "void",
+            [WellKnownTypes.SystemVoid.Name] = "void",
         };
 
         private static readonly ConcurrentBag<string> _keywords =

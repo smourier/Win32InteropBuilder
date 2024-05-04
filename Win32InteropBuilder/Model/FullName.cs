@@ -9,26 +9,27 @@ namespace Win32InteropBuilder.Model
     public class FullName : IEquatable<FullName>, IComparable<FullName>, IComparable, IFullyNameable, ICreatableFromString<FullName>
     {
         public const char NestedTypesSeparator = '+';
+        public const string FoundationNamespace = "Windows.Win32.Foundation";
 
         public static FullName SystemIntPtr { get; } = new(typeof(nint));
         public static FullName SystemValueType { get; } = new(typeof(ValueType));
         public static FullName SystemEnum { get; } = new(typeof(Enum));
         public static FullName IUnknown { get; } = new("Windows.Win32.System.Com.IUnknown");
         public static FullName IDispatch { get; } = new("Windows.Win32.System.Com.IDispatch");
-        public static FullName HRESULT { get; } = new("Windows.Win32.Foundation.HRESULT");
-        public static FullName BOOL { get; } = new("Windows.Win32.Foundation.BOOL");
-        public static FullName NativeTypedefAttribute { get; } = new("Windows.Win32.Foundation.Metadata.NativeTypedefAttribute");
-        public static FullName DocumentationAttribute { get; } = new("Windows.Win32.Foundation.Metadata.DocumentationAttribute");
-        public static FullName ComOutPtrAttribute { get; } = new("Windows.Win32.Foundation.Metadata.ComOutPtrAttribute");
-        public static FullName FlexibleArrayAttribute { get; } = new("Windows.Win32.Foundation.Metadata.FlexibleArrayAttribute");
-        public static FullName ConstAttribute { get; } = new("Windows.Win32.Foundation.Metadata.ConstAttribute");
-        public static FullName SupportedOSPlatformAttribute { get; } = new("Windows.Win32.Foundation.Metadata.SupportedOSPlatformAttribute");
-        public static FullName SupportedArchitectureAttribute { get; } = new("Windows.Win32.Foundation.Metadata.SupportedArchitectureAttribute");
-        public static FullName ConstantAttribute { get; } = new("Windows.Win32.Foundation.Metadata.ConstantAttribute");
-        public static FullName GuidAttribute { get; } = new("Windows.Win32.Foundation.Metadata.GuidAttribute");
-        public static FullName AnsiAttribute { get; } = new("Windows.Win32.Foundation.Metadata.AnsiAttribute");
-        public static FullName UnicodeAttribute { get; } = new("Windows.Win32.Foundation.Metadata.UnicodeAttribute");
-        public static FullName NativeArrayInfoAttribute { get; } = new("Windows.Win32.Foundation.Metadata.NativeArrayInfoAttribute");
+        public static FullName HRESULT { get; } = new(FoundationNamespace + ".HRESULT");
+        public static FullName BOOL { get; } = new(FoundationNamespace + ".BOOL");
+        public static FullName NativeTypedefAttribute { get; } = new(FoundationNamespace + ".Metadata.NativeTypedefAttribute");
+        public static FullName DocumentationAttribute { get; } = new(FoundationNamespace + ".Metadata.DocumentationAttribute");
+        public static FullName ComOutPtrAttribute { get; } = new(FoundationNamespace + ".Metadata.ComOutPtrAttribute");
+        public static FullName FlexibleArrayAttribute { get; } = new(FoundationNamespace + ".Metadata.FlexibleArrayAttribute");
+        public static FullName ConstAttribute { get; } = new(FoundationNamespace + ".Metadata.ConstAttribute");
+        public static FullName SupportedOSPlatformAttribute { get; } = new(FoundationNamespace + ".Metadata.SupportedOSPlatformAttribute");
+        public static FullName SupportedArchitectureAttribute { get; } = new(FoundationNamespace + ".Metadata.SupportedArchitectureAttribute");
+        public static FullName ConstantAttribute { get; } = new(FoundationNamespace + ".Metadata.ConstantAttribute");
+        public static FullName GuidAttribute { get; } = new(FoundationNamespace + ".Metadata.GuidAttribute");
+        public static FullName AnsiAttribute { get; } = new(FoundationNamespace + ".Metadata.AnsiAttribute");
+        public static FullName UnicodeAttribute { get; } = new(FoundationNamespace + ".Metadata.UnicodeAttribute");
+        public static FullName NativeArrayInfoAttribute { get; } = new(FoundationNamespace + ".Metadata.NativeArrayInfoAttribute");
         public static FullName UnmanagedFunctionPointerAttribute { get; } = new(typeof(UnmanagedFunctionPointerAttribute));
         public static FullName MulticastDelegate { get; } = new(typeof(MulticastDelegate));
         public static FullName FlagsAttribute { get; } = new(typeof(FlagsAttribute));

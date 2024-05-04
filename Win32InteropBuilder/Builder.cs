@@ -147,6 +147,7 @@ namespace Win32InteropBuilder
                 if (type == null)
                     continue;
 
+                IncludeTypeFromMetadata(context, type);
                 type.IsNested = typeDef.IsNested;
                 context.CurrentTypes.Push(type);
                 try
@@ -239,6 +240,12 @@ namespace Win32InteropBuilder
             }
 
             RemoveNonGeneratedTypes(context);
+        }
+
+        protected virtual void IncludeTypeFromMetadata(BuilderContext context, BuilderType type)
+        {
+            ArgumentNullException.ThrowIfNull(context);
+            ArgumentNullException.ThrowIfNull(type);
         }
 
         protected virtual void RemoveNonGeneratedTypes(BuilderContext context)
@@ -341,8 +348,8 @@ namespace Win32InteropBuilder
                             }
                         }
 
-                        bool isConstants() => finalType.FullName.Namespace == un.Namespace && finalType.FullName.Name == un.ConstantsFileName;
-                        bool isFunctions() => finalType.FullName.Namespace == un.Namespace && finalType.FullName.Name == un.FunctionsFileName;
+                        bool isConstants() => finalType.Namespace == un.Namespace && finalType.Name == un.ConstantsFileName;
+                        bool isFunctions() => finalType.Namespace == un.Namespace && finalType.Name == un.FunctionsFileName;
                     }
 
                     var ns = context.MapGeneratedFullName(finalType.FullName).Namespace.Replace('.', Path.DirectorySeparatorChar);
@@ -355,7 +362,11 @@ namespace Win32InteropBuilder
                         duplicateFiles[typePath] = list;
                     }
 
-                    duplicateFiles[typePath].Add(finalType);
+                    var dups = duplicateFiles[typePath];
+                    if (!dups.Contains(finalType))
+                    {
+                        dups.Add(finalType);
+                    }
                 }
 
                 // try to come up with unique names for duplicate files
@@ -409,7 +420,7 @@ namespace Win32InteropBuilder
                                 }
                                 else
                                 {
-                                    fn = new FullName(list[i].FullName.Namespace, names[i].Replace(".", string.Empty));
+                                    fn = new FullName(list[i].Namespace, names[i].Replace(".", string.Empty));
                                 }
 
                                 var clone = list[i].Clone(context, fn);

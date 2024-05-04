@@ -19,7 +19,7 @@ namespace Win32InteropBuilder.Model
             if (ns != null)
                 return new(GeneratedInteropNamespace + ".InlineArray" + ns + size);
 
-            return new(GeneratedInteropNamespace + ".InlineArray" + (elementName ?? elementType.FullName.Name) + size);
+            return new(GeneratedInteropNamespace + ".InlineArray" + (elementName ?? elementType.Name) + size);
         }
 
         public virtual BuilderType ElementType { get; protected set; }
