@@ -211,6 +211,11 @@ namespace Win32InteropBuilder
                             excludes.Add(type);
                             includes.Remove(type);
                         }
+
+                        if (match.Exclude)
+                        {
+                            type.IsGenerated = false;
+                        }
                     }
                 }
                 finally
@@ -366,6 +371,10 @@ namespace Win32InteropBuilder
                     if (!dups.Contains(finalType))
                     {
                         dups.Add(finalType);
+                    }
+                    else
+                    {
+                        context.TypesToBuild.Remove(type);
                     }
                 }
 

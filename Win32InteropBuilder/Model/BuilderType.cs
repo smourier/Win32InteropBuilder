@@ -496,23 +496,30 @@ namespace Win32InteropBuilder.Model
         protected virtual void CopyTo(BuilderType copy)
         {
             ArgumentNullException.ThrowIfNull(copy);
-            if (copy == this)
+            if (ReferenceEquals(copy, this))
                 return;
 
             copy.BaseType = BaseType;
-            copy.DeclaringType = DeclaringType;
             copy.TypeAttributes = TypeAttributes;
+            copy.DeclaringType = DeclaringType;
             copy.IsGenerated = IsGenerated;
+            copy.IsNested = IsNested;
+            copy.IsValueType = IsValueType;
             copy.Indirections = Indirections;
             copy.ArrayShape = ArrayShape;
             copy.Methods.AddRange(Methods);
             copy.Fields.AddRange(Fields);
             copy.Interfaces.AddRange(Interfaces);
             copy.NestedTypes.AddRange(NestedTypes);
+            copy.IncludedMethods.AddRange(IncludedMethods);
+            copy.ExcludedMethods.AddRange(ExcludedMethods);
+            copy.IncludedFields.AddRange(IncludedFields);
+            copy.ExcludedFields.AddRange(ExcludedFields);
             copy.Documentation = Documentation;
             copy.SupportedOSPlatform = SupportedOSPlatform;
             copy.Guid = Guid;
             copy.UnmanagedType = UnmanagedType;
+            copy.PrimitiveTypeCode = PrimitiveTypeCode;
         }
 
         public object? GetValue(byte[]? bytes)

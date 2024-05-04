@@ -216,6 +216,11 @@ namespace Win32InteropBuilder.Languages
             }
 
             ns = GetIdentifier(ns);
+            if (context.Configuration.Generation.AddNullToIntPtrValueTypes)
+            {
+                context.CurrentWriter.WriteLine("#nullable enable");
+            }
+
             context.CurrentWriter.WriteLine($"namespace {ns};");
             context.CurrentWriter.WriteLine();
             context.CurrentNamespace = ns;
