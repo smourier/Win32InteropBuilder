@@ -478,6 +478,11 @@ namespace Win32InteropBuilder.Generators
                     {
                         typeName = mapped.GetGeneratedName(context);
                     }
+
+                    if (mapped.UnmanagedType.HasValue)
+                    {
+                        context.CurrentWriter.WriteLine($"[return: MarshalAs(UnmanagedType.{mapped.UnmanagedType.Value})]");
+                    }
                 }
                 else
                 {
@@ -528,7 +533,7 @@ namespace Win32InteropBuilder.Generators
                 if (typeName == "char")
                 {
                     context.CurrentWriter.WriteLine();
-                    context.CurrentWriter.WriteLine($"public override readonly string ToString() => ((ReadOnlySpan<char>)this).ToString();");
+                    context.CurrentWriter.WriteLine($"public override readonly string ToString() => ((ReadOnlySpan<char>)this).ToString().TrimEnd('\\0');");
                 }
             });
         }
@@ -658,8 +663,7 @@ namespace Win32InteropBuilder.Generators
                     um = UnmanagedType.Error;
                 }
 
-                if (um.HasValue &&
-                    (!method.Attributes.HasFlag(MethodAttributes.Static) || mapped == WellKnownTypes.SystemBoolean))
+                if (um.HasValue && (!method.Attributes.HasFlag(MethodAttributes.Static) || mapped == WellKnownTypes.SystemBoolean))
                 {
                     context.CurrentWriter.WriteLine($"[return: MarshalAs(UnmanagedType.{um.Value})]");
                 }
@@ -937,7 +941,8 @@ namespace Win32InteropBuilder.Generators
             }
 
             var isOptional = parameter.Attributes.HasFlag(ParameterAttributes.Optional);
-            if (isOptional && def.TypeName != IntPtrTypeName)
+            // don't set ? on value type as this creates a Nullable<struct> which is managed/non-blittable
+            if (isOptional && def.TypeName != IntPtrTypeName && !parameter.Type.IsValueType)
             {
                 def.TypeName += "?";
             }
