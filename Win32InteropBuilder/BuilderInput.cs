@@ -32,6 +32,7 @@ namespace Win32InteropBuilder
         public bool IsWildcard { get; }
         public bool IsReverse { get; }
         public bool Exclude { get; }
+        public int MatchesCount { get; set; }
 
         public bool MatchesEverything => IsWildcard && Input == string.Empty; // "*"
         public bool ReversesEverything => IsReverse && Input == string.Empty; // "!"

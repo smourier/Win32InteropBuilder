@@ -140,6 +140,8 @@ namespace Win32InteropBuilder
             var includes = new HashSet<BuilderType>();
             var excludes = new HashSet<BuilderType>();
             var includedByMembers = new HashSet<BuilderType>();
+            var includedByTypes = new HashSet<BuilderType>();
+            var excludedByTypes = new HashSet<BuilderType>();
 
             foreach (var typeDef in context.MetadataReader.TypeDefinitions.Select(context.MetadataReader.GetTypeDefinition))
             {
@@ -150,12 +152,14 @@ namespace Win32InteropBuilder
                 IncludeTypeFromMetadata(context, type);
                 type.IsNested = typeDef.IsNested;
                 context.CurrentTypes.Push(type);
+
                 try
                 {
                     context.AllTypes[type.FullName] = type;
                     context.TypeDefinitions[type.FullName] = typeDef;
 
-                    if (context.Configuration.MemberInputs.Count > 0)
+                    // we consider members add/remove only for non-enum non-structure non-interface non-delegate types
+                    if (type.GetType() == typeof(BuilderType) && context.Configuration.MemberInputs.Count > 0)
                     {
                         foreach (var methodHandle in typeDef.GetMethods())
                         {
@@ -164,6 +168,7 @@ namespace Win32InteropBuilder
                             method.Handle = methodHandle;
                             foreach (var match in context.Configuration.MemberInputs.Where(x => x.Matches(method)))
                             {
+                                match.MatchesCount++;
                                 includedByMembers.Add(type);
                                 if (match.IsReverse)
                                 {
@@ -183,6 +188,7 @@ namespace Win32InteropBuilder
                             field.Handle = fieldHandle;
                             foreach (var match in context.Configuration.MemberInputs.Where(x => x.Matches(field)))
                             {
+                                match.MatchesCount++;
                                 includedByMembers.Add(type);
                                 if (match.IsReverse)
                                 {
@@ -198,18 +204,20 @@ namespace Win32InteropBuilder
 
                     foreach (var match in context.Configuration.TypeInputs.Where(x => x.Matches(type)))
                     {
-                        includedByMembers.Remove(type);
-                        type.IncludedFields.Clear();
-                        type.IncludedMethods.Clear();
-                        if (!match.IsReverse)
-                        {
-                            includes.Add(type);
-                            excludes.Remove(type);
-                        }
-                        else
+                        if (match.IsReverse)
                         {
                             excludes.Add(type);
                             includes.Remove(type);
+                            excludedByTypes.Add(type);
+                        }
+                        else
+                        {
+                            includes.Add(type);
+                            excludes.Remove(type);
+                            includedByTypes.Add(type);
+                            //includedByMembers.Remove(type);
+                            //type.IncludedFields.Clear();
+                            //type.IncludedMethods.Clear();
                         }
 
                         if (match.Exclude)
@@ -239,12 +247,26 @@ namespace Win32InteropBuilder
                 }
             }
 
+            foreach (var type in includedByTypes)
+            {
+                if (excludedByTypes.Contains(type))
+                    continue;
+
+                type.IncludedFields.Clear();
+                type.IncludedMethods.Clear();
+            }
+
             foreach (var type in includes)
             {
                 context.AddDependencies(type);
             }
 
-            RemoveNonGeneratedTypes(context);
+            ExcludeTypesFromBuild(context);
+
+            foreach (var input in context.Configuration.MemberInputs.Where(m => m.MatchesCount == 0))
+            {
+                context.LogWarning("No match for member input " + input);
+            }
         }
 
         protected virtual void IncludeTypeFromMetadata(BuilderContext context, BuilderType type)
@@ -253,7 +275,7 @@ namespace Win32InteropBuilder
             ArgumentNullException.ThrowIfNull(type);
         }
 
-        protected virtual void RemoveNonGeneratedTypes(BuilderContext context)
+        protected virtual void ExcludeTypesFromBuild(BuilderContext context)
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(context.Configuration);
@@ -290,6 +312,7 @@ namespace Win32InteropBuilder
             ArgumentNullException.ThrowIfNull(context);
             context.MappedTypes[FullName.BOOL] = WellKnownTypes.SystemBoolean;
             context.MappedTypes[FullName.IUnknown] = WellKnownTypes.SystemIntPtr;
+            context.MappedTypes[FullName.FARPROC] = WellKnownTypes.SystemIntPtr;
         }
 
         protected virtual void GenerateTypes(BuilderContext context)
