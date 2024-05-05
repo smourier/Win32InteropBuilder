@@ -528,6 +528,9 @@ namespace Win32InteropBuilder.Generators
             {
                 var elementName = type.ElementName ?? "Data";
                 var typeName = GetTypeReferenceName(type.ElementType.GetGeneratedName(context));
+
+                context.CurrentWriter.WriteLine($"public static int Length => {type.Size};");
+                context.CurrentWriter.WriteLine();
                 context.CurrentWriter.WriteLine($"public {typeName} {elementName};");
 
                 if (typeName == "char")
@@ -630,6 +633,34 @@ namespace Win32InteropBuilder.Generators
                 context.CurrentWriter.WriteLine("// " + method.Documentation);
             }
 
+            if (method.Name == "GetColorDirectoryW")
+            {
+            }
+
+            // patch from type
+            string? returnTypeName = null;
+            string? methodName = null;
+            var setLastError = method.ImportAttributes.HasFlag(MethodImportAttributes.SetLastError);
+            var methodPatch = context.Configuration.Patches?.Methods?.FirstOrDefault(m => m.Matches(method));
+            methodPatch ??= patch?.Methods?.FirstOrDefault(m => m.Matches(method));
+            if (methodPatch != null)
+            {
+                if (methodPatch.SetLastError.HasValue)
+                {
+                    setLastError = methodPatch.SetLastError.Value;
+                }
+
+                if (!string.IsNullOrEmpty(methodPatch.TypeName))
+                {
+                    returnTypeName = methodPatch.TypeName;
+                }
+
+                if (!string.IsNullOrEmpty(methodPatch.NewName))
+                {
+                    methodName = methodPatch.NewName;
+                }
+            }
+
             if (method.ImportModuleName != null)
             {
                 var module = method.ImportModuleName;
@@ -644,6 +675,12 @@ namespace Win32InteropBuilder.Generators
                 {
                     context.CurrentWriter.Write(", StringMarshalling = StringMarshalling.Utf16");
                 }
+
+                if (setLastError)
+                {
+                    context.CurrentWriter.Write(", SetLastError = true");
+                }
+
                 context.CurrentWriter.WriteLine(")]");
             }
 
@@ -653,25 +690,27 @@ namespace Win32InteropBuilder.Generators
             }
 
             context.CurrentWriter.WriteLine("[PreserveSig]");
-            string returnTypeName;
-            if (method.ReturnType != null && method.ReturnType != WellKnownTypes.SystemVoid)
+            if (returnTypeName == null)
             {
-                var mapped = context.MapType(method.ReturnType);
-                var um = mapped.UnmanagedType;
-                if (Configuration.MarshalAsError(mapped.FullName))
+                if (method.ReturnType != null && method.ReturnType != WellKnownTypes.SystemVoid)
                 {
-                    um = UnmanagedType.Error;
-                }
+                    var mapped = context.MapType(method.ReturnType);
+                    var um = mapped.UnmanagedType;
+                    if (Configuration.MarshalAsError(mapped.FullName))
+                    {
+                        um = UnmanagedType.Error;
+                    }
 
-                if (um.HasValue && (!method.Attributes.HasFlag(MethodAttributes.Static) || mapped == WellKnownTypes.SystemBoolean))
-                {
-                    context.CurrentWriter.WriteLine($"[return: MarshalAs(UnmanagedType.{um.Value})]");
+                    if (um.HasValue && (!method.Attributes.HasFlag(MethodAttributes.Static) || mapped == WellKnownTypes.SystemBoolean))
+                    {
+                        context.CurrentWriter.WriteLine($"[return: MarshalAs(UnmanagedType.{um.Value})]");
+                    }
+                    returnTypeName = GetTypeReferenceName(mapped.GetGeneratedName(context));
                 }
-                returnTypeName = GetTypeReferenceName(mapped.GetGeneratedName(context));
-            }
-            else
-            {
-                returnTypeName = "void";
+                else
+                {
+                    returnTypeName = "void";
+                }
             }
 
             string? staticText = null;
@@ -680,7 +719,7 @@ namespace Win32InteropBuilder.Generators
                 staticText = "static partial ";
             }
 
-            var methodName = GetIdentifier(method.Name);
+            methodName ??= GetIdentifier(method.Name);
             string? comments = null;
             foreach (var iface in type.AllInterfaces)
             {
@@ -699,22 +738,6 @@ namespace Win32InteropBuilder.Generators
             }
 
             returnTypeName = GetTypeReferenceName(returnTypeName);
-
-            // patch
-            var methodPatch = patch?.Methods?.FirstOrDefault(m => m.Matches(method));
-            if (methodPatch != null)
-            {
-                if (!string.IsNullOrEmpty(methodPatch.TypeName))
-                {
-                    returnTypeName = methodPatch.TypeName;
-                }
-
-                if (!string.IsNullOrEmpty(methodPatch.NewName))
-                {
-                    methodName = methodPatch.NewName;
-                }
-            }
-
             method.SetExtendedValue(nameof(returnTypeName), returnTypeName);
             method.SetExtendedValue(nameof(methodName), methodName);
 

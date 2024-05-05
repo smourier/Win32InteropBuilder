@@ -16,6 +16,7 @@ namespace Win32InteropBuilder
         public virtual string? Name { get; set; } // can be a number => index
         public virtual string? TypeName { get; set; }
         public virtual string? NewName { get; set; }
+        public virtual bool? SetLastError { get; set; }
         public virtual IList<BuilderPatchParameter> Parameters { get; set; } = [];
 
         public virtual bool Matches(BuilderMember member) => !_matcher.Value.IsReverse && _matcher.Value.Matches(member);
