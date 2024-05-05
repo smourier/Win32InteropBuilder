@@ -7,7 +7,7 @@ using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Win32InteropBuilder.Languages;
+using Win32InteropBuilder.Generators;
 using Win32InteropBuilder.Model;
 using Win32InteropBuilder.Utilities;
 
@@ -44,23 +44,23 @@ namespace Win32InteropBuilder
                 Assembly.LoadFrom(configuration.BuilderTypeFilePath);
             }
 
-            if (configuration.Language?.TypeFilePath != null)
+            if (configuration.Generator?.TypeFilePath != null)
             {
-                Assembly.LoadFrom(configuration.Language.TypeFilePath);
+                Assembly.LoadFrom(configuration.Generator.TypeFilePath);
             }
 
-            configuration.Language ??= new BuilderConfiguration.LanguageConfiguration();
-            configuration.Language.TypeName ??= typeof(CSharpLanguage).AssemblyQualifiedName!;
+            configuration.Generator ??= new BuilderConfiguration.GeneratorConfiguration();
+            configuration.Generator.TypeName ??= typeof(CSharpGenerator).AssemblyQualifiedName!;
             configuration.BuilderTypeName ??= typeof(Builder).AssemblyQualifiedName!;
             configuration.WinMdPath ??= winMdPath;
             configuration.OutputDirectoryPath ??= Path.Combine(Path.GetDirectoryName(configurationPath).Nullify() ?? Path.GetFullPath("."), Path.GetFileNameWithoutExtension(configurationPath));
-            configuration.ExtensionsOutputDirectoryPath ??= Path.Combine(configuration.OutputDirectoryPath, "Extensions");
+            configuration.ExtensionsOutputDirectoryPath ??= Path.Combine(configuration.OutputDirectoryPath, BuilderTypeExtension.DefaultPostfix);
 
             var builderType = Type.GetType(configuration.BuilderTypeName, true)!;
             var builder = (Builder)Activator.CreateInstance(builderType)!;
 
-            var languageType = Type.GetType(configuration.Language.TypeName, true)!;
-            var language = (ILanguage)Activator.CreateInstance(languageType)!;
+            var generatorType = Type.GetType(configuration.Generator.TypeName, true)!;
+            var generator = (IGenerator)Activator.CreateInstance(generatorType)!;
 
             if (!string.IsNullOrEmpty(configuration.PatchesFilePath))
             {
@@ -80,23 +80,23 @@ namespace Win32InteropBuilder
                 }
             }
 
-            // reread file to configure per language
+            // reread file to configure per generator
             using var stream2 = File.OpenRead(configurationPath);
             var configurationDic = JsonSerializer.Deserialize<Dictionary<string, object>>(stream2, JsonSerializerOptions);
-            if (configurationDic?.TryGetValue(nameof(configuration.Language), out var languageConfig) == true &&
-                languageConfig is JsonElement element &&
+            if (configurationDic?.TryGetValue(nameof(configuration.Generator), out var generatorConfig) == true &&
+                generatorConfig is JsonElement element &&
                 element.ValueKind == JsonValueKind.Object &&
-                element.TryGetProperty(language.Name, out var perLangConfig))
+                element.TryGetProperty(generator.Name, out var perLangConfig))
             {
-                language.Configure(perLangConfig);
+                generator.Configure(perLangConfig);
             }
 
-            var context = builder.CreateBuilderContext(configuration, language);
+            var context = builder.CreateBuilderContext(configuration, generator);
             context.Logger = new ConsoleLogger();
             context.LogInfo($"Builder type name: {builder.GetType().FullName}");
             context.LogInfo($"WinMd path: {configuration.WinMdPath}");
             context.LogInfo($"Architecture: {configuration.Architecture}");
-            context.LogInfo($"Language: {language.Name}");
+            context.LogInfo($"Generator: {generator.Name}");
             context.LogInfo($"Output path: {configuration.OutputDirectoryPath}");
             context.LogInfo($"Output encoding: {configuration.FinalOutputEncoding.WebName}");
             context.LogInfo($"Running {builderType!.FullName} builder...");
@@ -104,7 +104,7 @@ namespace Win32InteropBuilder
             builder.Build(context);
         }
 
-        public virtual BuilderContext CreateBuilderContext(BuilderConfiguration configuration, ILanguage language) => new(configuration, language);
+        public virtual BuilderContext CreateBuilderContext(BuilderConfiguration configuration, IGenerator generator) => new(configuration, generator);
 
         public virtual void Build(BuilderContext context)
         {
@@ -358,7 +358,7 @@ namespace Win32InteropBuilder
                     }
 
                     var ns = context.MapGeneratedFullName(finalType.FullName).Namespace.Replace('.', Path.DirectorySeparatorChar);
-                    var fileName = finalType.FileName + context.Language.FileExtension;
+                    var fileName = finalType.FileName + context.Generator.FileExtension;
                     var typePath = Path.Combine(context.Configuration.OutputDirectoryPath, ns, fileName);
 
                     if (!duplicateFiles.TryGetValue(typePath, out var list))

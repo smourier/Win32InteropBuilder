@@ -439,7 +439,7 @@ namespace Win32InteropBuilder.Model
 
             var text = writer.ToString();
             var ns = context.MapGeneratedFullName(FullName).Namespace.Replace('.', Path.DirectorySeparatorChar);
-            var fileName = FileName + context.Language.FileExtension;
+            var fileName = FileName + context.Generator.FileExtension;
             var typePath = Path.Combine(context.Configuration.OutputDirectoryPath, ns, fileName);
 
             if (IOUtilities.PathIsFile(typePath))
@@ -459,8 +459,8 @@ namespace Win32InteropBuilder.Model
         public virtual void GenerateCode(BuilderContext context)
         {
             ArgumentNullException.ThrowIfNull(context);
-            ArgumentNullException.ThrowIfNull(context.Language);
-            context.Language.GenerateCode(context, this);
+            ArgumentNullException.ThrowIfNull(context.Generator);
+            context.Generator.GenerateCode(context, this);
         }
 
         public virtual BuilderType CloneType(BuilderContext context, FullName? fullName = null)

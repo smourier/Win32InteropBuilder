@@ -13,12 +13,12 @@ namespace Win32InteropBuilder
 {
     public class BuilderContext
     {
-        public BuilderContext(BuilderConfiguration configuration, ILanguage language)
+        public BuilderContext(BuilderConfiguration configuration, IGenerator generator)
         {
             ArgumentNullException.ThrowIfNull(configuration);
-            ArgumentNullException.ThrowIfNull(language);
+            ArgumentNullException.ThrowIfNull(generator);
             Configuration = configuration;
-            Language = language;
+            Generator = generator;
             SignatureTypeProvider = new SignatureTypeProvider(this);
             CustomAttributeTypeProvider = new CustomAttributeTypeProvider(this);
             ImplicitNamespaces.Add("System");
@@ -26,7 +26,7 @@ namespace Win32InteropBuilder
         }
 
         public BuilderConfiguration Configuration { get; }
-        public ILanguage Language { get; }
+        public IGenerator Generator { get; }
         public virtual ILogger? Logger { get; set; }
         public virtual SignatureTypeProvider SignatureTypeProvider { get; }
         public virtual CustomAttributeTypeProvider CustomAttributeTypeProvider { get; }
@@ -157,7 +157,7 @@ namespace Win32InteropBuilder
             if (type is EnumType)
                 return true;
 
-            return Language.ConstableTypes.Contains(type.FullName);
+            return Generator.ConstableTypes.Contains(type.FullName);
         }
 
         public virtual string GetValueAsString(BuilderType type, object? value, string defaultValueAsString)

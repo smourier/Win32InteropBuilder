@@ -10,13 +10,13 @@ using System.Text.Json;
 using Win32InteropBuilder.Model;
 using Win32InteropBuilder.Utilities;
 
-namespace Win32InteropBuilder.Languages
+namespace Win32InteropBuilder.Generators
 {
-    public class CSharpLanguage : ILanguage
+    public class CSharpGenerator : IGenerator
     {
         public string Name => "CSharp";
         public string FileExtension => ".cs";
-        public CSharpLanguageConfiguration Configuration { get; private set; } = new();
+        public CSharpGeneratorConfiguration Configuration { get; private set; } = new();
         public IReadOnlyCollection<FullName> ConstableTypes => _constableTypes;
 
         private const string IntPtrTypeName = "nint";
@@ -25,7 +25,7 @@ namespace Win32InteropBuilder.Languages
         public override string ToString() => Name;
         public virtual void Configure(JsonElement element)
         {
-            Configuration = element.Deserialize<CSharpLanguageConfiguration>(Builder.JsonSerializerOptions) ?? new();
+            Configuration = element.Deserialize<CSharpGeneratorConfiguration>(Builder.JsonSerializerOptions) ?? new();
 
             // supported constants types
             if (Configuration.SupportedConstantTypes.Any(b => b.MatchesEverything))
@@ -35,7 +35,7 @@ namespace Win32InteropBuilder.Languages
             else
             {
                 // add all c# const
-                foreach (var fn in new CSharpLanguage().ConstableTypes)
+                foreach (var fn in new CSharpGenerator().ConstableTypes)
                 {
                     Configuration.AddSupportedConstantType(fn);
                 }

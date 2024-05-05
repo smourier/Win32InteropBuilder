@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace Win32InteropBuilder.Model
 {
-    public interface ILanguage
+    public interface IGenerator
     {
         string Name { get; }
         string FileExtension { get; }

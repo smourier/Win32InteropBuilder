@@ -44,7 +44,7 @@ namespace Win32InteropBuilder.Model
             }
 
             var text = writer.ToString();
-            var fileName = FileName + context.Language.FileExtension;
+            var fileName = FileName + context.Generator.FileExtension;
             var typePath = Path.Combine(context.Configuration.ExtensionsOutputDirectoryPath, fileName);
 
             if (IOUtilities.PathIsFile(typePath))
@@ -64,8 +64,8 @@ namespace Win32InteropBuilder.Model
         public virtual void GenerateCode(BuilderContext context)
         {
             ArgumentNullException.ThrowIfNull(context);
-            ArgumentNullException.ThrowIfNull(context.Language);
-            context.Language.GenerateExtension(context, this);
+            ArgumentNullException.ThrowIfNull(context.Generator);
+            context.Generator.GenerateExtension(context, this);
         }
     }
 }

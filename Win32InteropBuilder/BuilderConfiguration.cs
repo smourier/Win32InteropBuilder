@@ -27,7 +27,7 @@ namespace Win32InteropBuilder
         public virtual IList<BuilderMemberInput> MemberInputs { get; set; } = [];
         public virtual Encoding FinalOutputEncoding => OutputEncoding ?? Encoding.UTF8;
         public virtual BuilderGeneration Generation { get; set; } = new();
-        public virtual LanguageConfiguration Language { get; set; } = new();
+        public virtual GeneratorConfiguration Generator { get; set; } = new();
         public virtual Architecture Architecture { get; set; } = GetCurrentArchitecture();
 
         private static Architecture GetCurrentArchitecture()
@@ -67,7 +67,7 @@ namespace Win32InteropBuilder
             }
         }
 
-        public class LanguageConfiguration
+        public class GeneratorConfiguration
         {
             public virtual string? TypeFilePath { get; set; }
             public virtual string? TypeName { get; set; }

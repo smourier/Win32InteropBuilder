@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using Win32InteropBuilder.Model;
 
-namespace Win32InteropBuilder.Languages
+namespace Win32InteropBuilder.Generators
 {
-    public class CSharpLanguageConfiguration
+    public class CSharpGeneratorConfiguration
     {
         public virtual bool GenerateTypeKeywords { get; set; } = true;
         public virtual ISet<BuilderFullNameInput> SupportedConstantTypes { get; set; } = new HashSet<BuilderFullNameInput>();
