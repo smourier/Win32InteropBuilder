@@ -39,6 +39,7 @@ namespace Win32InteropBuilder
         public virtual ISet<string> ImplicitNamespaces { get; } = new HashSet<string>();
         public virtual ISet<BuilderType> TypesWithFunctions { get; } = new HashSet<BuilderType>();
         public virtual ISet<BuilderType> TypesWithConstants { get; } = new HashSet<BuilderType>();
+        public virtual IDictionary<string, object> Constants { get; } = new Dictionary<string, object>();
 
         // changing properties
         public virtual IndentedTextWriter? CurrentWriter { get; set; }
@@ -178,6 +179,18 @@ namespace Win32InteropBuilder
             ArgumentNullException.ThrowIfNull(parameter);
             ArgumentNullException.ThrowIfNull(defaultDef);
             return defaultDef;
+        }
+
+        public virtual BuilderType? GetTypeFromValue(object value)
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            var valueType = value.GetType();
+            foreach (var kv in WellKnownTypes.All)
+            {
+                if (kv.Value.ClrType != null && kv.Value.ClrType == valueType)
+                    return kv.Value;
+            }
+            return null;
         }
 
         public void LogInfo(object? message = null, [CallerMemberName] string? methodName = null) => Log(TraceLevel.Info, message, methodName);

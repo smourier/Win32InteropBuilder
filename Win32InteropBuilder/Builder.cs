@@ -215,9 +215,6 @@ namespace Win32InteropBuilder
                             includes.Add(type);
                             excludes.Remove(type);
                             includedByTypes.Add(type);
-                            //includedByMembers.Remove(type);
-                            //type.IncludedFields.Clear();
-                            //type.IncludedMethods.Clear();
                         }
 
                         if (match.Exclude)
@@ -512,6 +509,21 @@ namespace Win32InteropBuilder
 
                     if (constantsType.IsGenerated)
                     {
+                        // add manually defined constants
+                        foreach (var kv in context.Constants)
+                        {
+                            if (constantsType.Fields.Any(f => f.Name == kv.Key))
+                                continue;
+
+                            var field = context.CreateBuilderField(kv.Key);
+                            field.DefaultValue = kv.Value;
+                            field.Type = context.GetTypeFromValue(kv.Value);
+                            if (field.Type == null)
+                                throw new InvalidOperationException();
+
+                            constantsType.Fields.Add(field);
+                        }
+
                         var typePath = constantsType.Generate(context);
                         if (typePath != null)
                         {

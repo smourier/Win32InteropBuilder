@@ -178,6 +178,19 @@ namespace Win32InteropBuilder.Model
                 ResolveMethods(context, typeDef);
                 ResolveInterfaces(context, typeDef);
                 ResolveFields(context, typeDef);
+
+                if (this is not InterfaceType &&
+                    Methods.Count == 0 &&
+                    Fields.Count == 0 &&
+                    NestedTypes.Count == 0)
+                {
+                    if (Guid.HasValue)
+                    {
+                        // move this as a guid constant (ex: KSPROPSETID_Audio defines a GUID)
+                        context.Constants[Name] = Guid.Value;
+                    }
+                    IsGenerated = false;
+                }
             }
             finally
             {

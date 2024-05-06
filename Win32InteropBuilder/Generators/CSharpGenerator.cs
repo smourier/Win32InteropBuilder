@@ -342,6 +342,13 @@ namespace Win32InteropBuilder.Generators
             ArgumentNullException.ThrowIfNull(context.CurrentWriter);
             ArgumentNullException.ThrowIfNull(type);
 
+            if (type.Guid.HasValue)
+            {
+                // note: this shouldn't happen when there are fields
+                // when there are no fields, it should have been translated into a guid constant
+                context.CurrentWriter.WriteLine($"[Guid(\"{type.Guid.GetValueOrDefault()}\")]");
+            }
+
             if (type.SupportedOSPlatform != null)
             {
                 context.CurrentWriter.WriteLine($"[SupportedOSPlatform(\"{type.SupportedOSPlatform}\")]");
