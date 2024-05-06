@@ -17,9 +17,9 @@ namespace Win32InteropBuilder.Model
             ArgumentNullException.ThrowIfNull(elementType);
             var ns = elementType.FullName.NestedName;
             if (ns != null)
-                return new(GeneratedInteropNamespace + ".InlineArray" + ns + size);
+                return new(GeneratedInteropNamespace + ".InlineArray" + ns + "_" + size);
 
-            return new(GeneratedInteropNamespace + ".InlineArray" + (elementName ?? elementType.Name) + size);
+            return new(GeneratedInteropNamespace + ".InlineArray" + (elementName ?? elementType.Name) + "_" + size);
         }
 
         public virtual BuilderType ElementType { get; protected set; }

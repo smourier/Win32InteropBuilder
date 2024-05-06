@@ -529,14 +529,15 @@ namespace Win32InteropBuilder.Generators
             ArgumentNullException.ThrowIfNull(context.CurrentWriter);
             ArgumentNullException.ThrowIfNull(type);
 
-            context.CurrentWriter.WriteLine($"[InlineArray({type.Size})]");
-            context.CurrentWriter.WriteLine($"public partial struct {GetIdentifier(type.GetGeneratedName(context))}");
+            var typeName = GetIdentifier(type.GetGeneratedName(context));
+            context.CurrentWriter.WriteLine($"[InlineArray({typeName}.Length)]");
+            context.CurrentWriter.WriteLine($"public partial struct {typeName}");
             context.CurrentWriter.WithParens(() =>
             {
                 var elementName = type.ElementName ?? "Data";
                 var typeName = GetTypeReferenceName(type.ElementType.GetGeneratedName(context));
 
-                context.CurrentWriter.WriteLine($"public static int Length => {type.Size};");
+                context.CurrentWriter.WriteLine($"public const int Length = {type.Size};");
                 context.CurrentWriter.WriteLine();
                 context.CurrentWriter.WriteLine($"public {typeName} {elementName};");
 
