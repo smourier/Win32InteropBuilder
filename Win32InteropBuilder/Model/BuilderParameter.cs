@@ -22,6 +22,7 @@ namespace Win32InteropBuilder.Model
         public virtual ParameterAttributes Attributes { get; set; }
         public virtual BuilderType? Type { get; set; }
         public virtual bool IsComOutPtr { get; set; }
+        public virtual short? BytesParamIndex { get; set; }
         public virtual NativeArray? NativeArray { get; set; }
         public virtual bool IsConst { get; set; }
         public virtual string? Documentation { get; set; }

@@ -20,6 +20,7 @@ namespace Win32InteropBuilder.Model
         public static FullName BOOL { get; } = new(FoundationNamespace + ".BOOL");
         public static FullName FARPROC { get; } = new(FoundationNamespace + ".FARPROC");
         public static FullName NativeTypedefAttribute { get; } = new(FoundationNamespace + ".Metadata.NativeTypedefAttribute");
+        public static FullName MemorySizeAttribute { get; } = new(FoundationNamespace + ".Metadata.MemorySizeAttribute");
         public static FullName DocumentationAttribute { get; } = new(FoundationNamespace + ".Metadata.DocumentationAttribute");
         public static FullName ComOutPtrAttribute { get; } = new(FoundationNamespace + ".Metadata.ComOutPtrAttribute");
         public static FullName FlexibleArrayAttribute { get; } = new(FoundationNamespace + ".Metadata.FlexibleArrayAttribute");

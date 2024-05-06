@@ -236,6 +236,7 @@ namespace Win32InteropBuilder.Model
         public static bool IsHandle(this MetadataReader reader, TypeDefinition type, SignatureTypeProvider signatureTypeProvider)
         {
             ArgumentNullException.ThrowIfNull(reader);
+            ArgumentNullException.ThrowIfNull(type);
             ArgumentNullException.ThrowIfNull(signatureTypeProvider);
             if (!reader.IsNativeTypedef(type))
                 return false;
@@ -288,6 +289,26 @@ namespace Win32InteropBuilder.Model
             ArgumentNullException.ThrowIfNull(reader);
             var handle = handles.FirstOrDefault(h => reader.GetFullName(reader.GetCustomAttribute(h)) == FullName.ComOutPtrAttribute);
             return !handle.IsNil;
+        }
+
+        public static short? GetBytesParamIndex(this BuilderContext context, CustomAttributeHandleCollection handles)
+        {
+            ArgumentNullException.ThrowIfNull(context);
+            ArgumentNullException.ThrowIfNull(context.MetadataReader);
+            var handle = handles.FirstOrDefault(h => context.MetadataReader.GetFullName(context.MetadataReader.GetCustomAttribute(h)) == FullName.MemorySizeAttribute);
+            if (handle.IsNil)
+                return null;
+
+            var value = GetValue(context, context.MetadataReader.GetCustomAttribute(handle));
+            foreach (var arg in value.NamedArguments)
+            {
+                switch (arg.Name)
+                {
+                    case "BytesParamIndex":
+                        return (short)arg.Value!;
+                }
+            }
+            return null;
         }
 
         public static NativeArray? GetNativeArray(this BuilderContext context, CustomAttributeHandleCollection handles)

@@ -279,6 +279,7 @@ namespace Win32InteropBuilder.Model
                     parameter.IsComOutPtr = context.MetadataReader.IsComOutPtr(ca);
                     parameter.IsConst = context.MetadataReader.IsConst(ca);
                     parameter.NativeArray = context.GetNativeArray(ca);
+                    parameter.BytesParamIndex = context.GetBytesParamIndex(ca);
                     method.Parameters.Add(parameter);
                 }
                 method.SortAndResolveParameters();

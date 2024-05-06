@@ -641,10 +641,6 @@ namespace Win32InteropBuilder.Generators
                 context.CurrentWriter.WriteLine("// " + method.Documentation);
             }
 
-            if (method.Name == "GetColorDirectoryW")
-            {
-            }
-
             // patch from type
             string? returnTypeName = null;
             string? methodName = null;
@@ -851,7 +847,10 @@ namespace Win32InteropBuilder.Generators
                 def.MarshalAs = new ParameterMarshalAs { UnmanagedType = mapped.UnmanagedType.Value };
             }
 
-            if (!def.Direction.HasValue && mapped.Indirections > 0 && def.TypeName != IntPtrTypeName && def.TypeName != UIntPtrTypeName)
+            if (!def.Direction.HasValue &&
+                mapped.Indirections > 0 &&
+                def.TypeName != IntPtrTypeName &&
+                def.TypeName != UIntPtrTypeName)
             {
                 def.Direction = ParameterDirection.In;
             }
@@ -972,6 +971,13 @@ namespace Win32InteropBuilder.Generators
             }
 
             var isOptional = parameter.Attributes.HasFlag(ParameterAttributes.Optional);
+
+            // typically the case of P(W)STR passed as pointers to memory, must not be marked as "out"
+            if (isOptional && def.Direction == ParameterDirection.Out && parameter.BytesParamIndex.HasValue)
+            {
+                def.Direction = null;
+            }
+
             // don't set ? on value type as this creates a Nullable<struct> which is managed/non-blittable
             if (isOptional && def.TypeName != IntPtrTypeName && !parameter.Type.IsValueType)
             {
