@@ -55,6 +55,7 @@ namespace Win32InteropBuilder
             public virtual bool AddNullableEnable { get; set; } = true;
             public virtual UnifiedGeneration Unified { get; set; } = new();
             public virtual IList<BuilderTypeInput> InterfaceExtensions { get; set; } = [];
+            public virtual SetLastErrorMode SetLastErrorMode { get; set; }
 
             public class UnifiedGeneration
             {
@@ -65,6 +66,12 @@ namespace Win32InteropBuilder
                 public virtual string? FunctionsFileName { get; set; } = DefaultFunctionsFileName;
                 public virtual string? ConstantsFileName { get; set; } = DefaultConstantsFileName;
             }
+        }
+
+        public enum SetLastErrorMode
+        {
+            Auto,
+            Attributed,
         }
 
         public class GeneratorConfiguration

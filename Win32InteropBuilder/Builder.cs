@@ -281,17 +281,14 @@ namespace Win32InteropBuilder
             context.TypesToBuild.Remove(new BuilderType(FullName.IUnknown));
         }
 
+        // unsed today
         protected virtual void RemoveHandleTypes(BuilderContext context)
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(context.MetadataReader);
-            foreach (var type in context.TypesToBuild.ToArray())
+            foreach (var type in context.TypesToBuild.ToArray().Where(t => t.IsHandle))
             {
-                if (context.TypeDefinitions.TryGetValue(type.FullName, out var typeDef) &&
-                    context.MetadataReader.IsHandle(typeDef, context.SignatureTypeProvider))
-                {
-                    context.TypesToBuild.Remove(type);
-                }
+                context.TypesToBuild.Remove(type);
             }
         }
 

@@ -644,7 +644,14 @@ namespace Win32InteropBuilder.Generators
             // patch from type
             string? returnTypeName = null;
             string? methodName = null;
-            var setLastError = method.ImportAttributes.HasFlag(MethodImportAttributes.SetLastError);
+
+            // consider last error only for functions
+            var setLastError = false;
+            if (type.GetType() == typeof(BuilderType))
+            {
+                setLastError = context.HasSetLastError(method);
+            }
+
             var methodPatch = context.Configuration.Patches?.Methods?.FirstOrDefault(m => m.Matches(method));
             methodPatch ??= patch?.Methods?.FirstOrDefault(m => m.Matches(method));
             if (methodPatch != null)

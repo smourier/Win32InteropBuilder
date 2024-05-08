@@ -50,6 +50,7 @@ namespace Win32InteropBuilder.Model
         public virtual bool IsGenerated { get; set; } = true;
         public virtual bool IsNested { get; set; }
         public virtual bool IsValueType { get; set; }
+        public virtual bool IsHandle { get; set; }
         public virtual int Indirections { get; set; }
         public virtual ArrayShape? ArrayShape { get; set; }
         public virtual IList<BuilderMethod> Methods => _methods;
@@ -151,6 +152,7 @@ namespace Win32InteropBuilder.Model
 
             Guid = context.GetMetadataGuid(typeDef.GetCustomAttributes());
             IsValueType = context.MetadataReader.IsValueType(typeDef);
+            IsHandle = context.IsHandleType(this, typeDef);
             TypeAttributes = typeDef.Attributes;
             IsNested = typeDef.IsNested;
             context.TypesToBuild.Add(this);

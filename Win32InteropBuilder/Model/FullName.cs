@@ -17,6 +17,7 @@ namespace Win32InteropBuilder.Model
         public static FullName IUnknown { get; } = new("Windows.Win32.System.Com.IUnknown");
         public static FullName IDispatch { get; } = new("Windows.Win32.System.Com.IDispatch");
         public static FullName HRESULT { get; } = new(FoundationNamespace + ".HRESULT");
+        public static FullName LRESULT { get; } = new(FoundationNamespace + ".LRESULT");
         public static FullName BOOL { get; } = new(FoundationNamespace + ".BOOL");
         public static FullName FARPROC { get; } = new(FoundationNamespace + ".FARPROC");
         public static FullName NativeTypedefAttribute { get; } = new(FoundationNamespace + ".Metadata.NativeTypedefAttribute");

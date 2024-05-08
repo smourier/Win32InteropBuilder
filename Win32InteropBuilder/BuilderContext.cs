@@ -193,6 +193,58 @@ namespace Win32InteropBuilder
             return null;
         }
 
+        public virtual bool IsHandleType(BuilderType type, TypeDefinition typeDef)
+        {
+            ArgumentNullException.ThrowIfNull(type);
+            ArgumentNullException.ThrowIfNull(MetadataReader);
+            if (type is not StructureType)
+                return false;
+
+            if (!MetadataReader.IsHandle(typeDef, SignatureTypeProvider))
+                return false;
+
+            if (type.FullName == FullName.LRESULT)
+                return false;
+
+            return true;
+        }
+
+        // last error is globally not well defined in Win32metadata
+        // so the logic is to set it when it's not defined even if it's not always ok
+        public virtual bool HasSetLastError(BuilderMethod method)
+        {
+            ArgumentNullException.ThrowIfNull(method);
+            ArgumentNullException.ThrowIfNull(Configuration);
+            ArgumentNullException.ThrowIfNull(Configuration.Generation);
+
+            if (method.ImportAttributes.HasFlag(MethodImportAttributes.SetLastError))
+                return true;
+
+            if (Configuration.Generation.SetLastErrorMode != BuilderConfiguration.SetLastErrorMode.Auto || method.ReturnType == null)
+                return false;
+
+            // void is rarely last error
+            if (method.ReturnType == WellKnownTypes.SystemVoid)
+                return false;
+
+            // HRESULT is never last error
+            if (method.ReturnType.FullName == FullName.HRESULT)
+                return false;
+
+            // bool is often last error
+            if (method.ReturnType == WellKnownTypes.SystemBoolean ||
+                method.ReturnType.FullName == FullName.BOOL)
+                return true;
+
+            // handle often set last errrors
+            if (method.ReturnType == WellKnownTypes.SystemIntPtr ||
+                method.ReturnType == WellKnownTypes.SystemUIntPtr ||
+                method.ReturnType.IsHandle)
+                return true;
+
+            return false;
+        }
+
         public void LogInfo(object? message = null, [CallerMemberName] string? methodName = null) => Log(TraceLevel.Info, message, methodName);
         public void LogWarning(object? message = null, [CallerMemberName] string? methodName = null) => Log(TraceLevel.Warning, message, methodName);
         public void LogError(object? message = null, [CallerMemberName] string? methodName = null) => Log(TraceLevel.Error, message, methodName);
