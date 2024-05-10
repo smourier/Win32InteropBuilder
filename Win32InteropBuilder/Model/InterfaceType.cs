@@ -25,9 +25,15 @@ namespace Win32InteropBuilder.Model
                 var lastIFace = AllInterfaces.LastOrDefault() ?? this;
                 if (!context.Extensions.TryGetValue(lastIFace.FullName, out var ext))
                 {
-                    ext = new BuilderTypeExtension(lastIFace);
-                    context.Extensions[lastIFace.FullName] = ext;
+                    ext = context.CreateTypeExtension(lastIFace);
+                    if (ext != null)
+                    {
+                        context.Extensions[lastIFace.FullName] = ext;
+                    }
                 }
+
+                if (ext == null)
+                    continue;
 
                 if (ext.RootType != this)
                 {

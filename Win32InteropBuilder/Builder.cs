@@ -165,6 +165,9 @@ namespace Win32InteropBuilder
                         {
                             var methodDef = context.MetadataReader.GetMethodDefinition(methodHandle);
                             var method = context.CreateBuilderMethod(context.MetadataReader.GetString(methodDef.Name));
+                            if (method == null)
+                                continue;
+
                             method.Handle = methodHandle;
                             foreach (var match in context.Configuration.MemberInputs.Where(x => x.Matches(method)))
                             {
@@ -185,6 +188,9 @@ namespace Win32InteropBuilder
                         {
                             var fieldDef = context.MetadataReader.GetFieldDefinition(fieldHandle);
                             var field = context.CreateBuilderField(context.MetadataReader.GetString(fieldDef.Name));
+                            if (field == null)
+                                continue;
+
                             field.Handle = fieldHandle;
                             foreach (var match in context.Configuration.MemberInputs.Where(x => x.Matches(field)))
                             {
@@ -500,31 +506,37 @@ namespace Win32InteropBuilder
                 {
                     var fields = context.TypesWithConstants.SelectMany(t => t.GeneratedFields).ToHashSet();
                     var constantsType = context.CreateBuilderType(new FullName(un.Namespace!, un.ConstantsFileName));
-                    constantsType.Attributes |= BuilderTypeAttributes.IsUnifiedConstants;
-                    constantsType.TypeAttributes |= TypeAttributes.Abstract | TypeAttributes.Sealed; // static
-                    constantsType.Fields.AddRange(fields);
-
-                    if (constantsType.IsGenerated)
+                    if (constantsType != null)
                     {
-                        // add manually defined constants
-                        foreach (var kv in context.Constants)
+                        constantsType.Attributes |= BuilderTypeAttributes.IsUnifiedConstants;
+                        constantsType.TypeAttributes |= TypeAttributes.Abstract | TypeAttributes.Sealed; // static
+                        constantsType.Fields.AddRange(fields);
+
+                        if (constantsType.IsGenerated)
                         {
-                            if (constantsType.Fields.Any(f => f.Name == kv.Key))
-                                continue;
+                            // add manually defined constants
+                            foreach (var kv in context.Constants)
+                            {
+                                if (constantsType.Fields.Any(f => f.Name == kv.Key))
+                                    continue;
 
-                            var field = context.CreateBuilderField(kv.Key);
-                            field.DefaultValue = kv.Value;
-                            field.Type = context.GetTypeFromValue(kv.Value);
-                            if (field.Type == null)
-                                throw new InvalidOperationException();
+                                var field = context.CreateBuilderField(kv.Key);
+                                if (field == null)
+                                    continue;
 
-                            constantsType.Fields.Add(field);
-                        }
+                                field.DefaultValue = kv.Value;
+                                field.Type = context.GetTypeFromValue(kv.Value);
+                                if (field.Type == null)
+                                    throw new InvalidOperationException();
 
-                        var typePath = constantsType.Generate(context);
-                        if (typePath != null)
-                        {
-                            existingFiles.Remove(typePath);
+                                constantsType.Fields.Add(field);
+                            }
+
+                            var typePath = constantsType.Generate(context);
+                            if (typePath != null)
+                            {
+                                existingFiles.Remove(typePath);
+                            }
                         }
                     }
                 }
@@ -533,16 +545,19 @@ namespace Win32InteropBuilder
                 {
                     var functions = context.TypesWithFunctions.SelectMany(t => t.GeneratedMethods).ToHashSet();
                     var functionsType = context.CreateBuilderType(new FullName(un.Namespace!, un.FunctionsFileName));
-                    functionsType.Attributes |= BuilderTypeAttributes.IsUnifiedFunctions;
-                    functionsType.TypeAttributes |= TypeAttributes.Abstract | TypeAttributes.Sealed; // static
-                    functionsType.Methods.AddRange(functions);
-
-                    if (functionsType.IsGenerated)
+                    if (functionsType != null)
                     {
-                        var typePath = functionsType.Generate(context);
-                        if (typePath != null)
+                        functionsType.Attributes |= BuilderTypeAttributes.IsUnifiedFunctions;
+                        functionsType.TypeAttributes |= TypeAttributes.Abstract | TypeAttributes.Sealed; // static
+                        functionsType.Methods.AddRange(functions);
+
+                        if (functionsType.IsGenerated)
                         {
-                            existingFiles.Remove(typePath);
+                            var typePath = functionsType.Generate(context);
+                            if (typePath != null)
+                            {
+                                existingFiles.Remove(typePath);
+                            }
                         }
                     }
                 }

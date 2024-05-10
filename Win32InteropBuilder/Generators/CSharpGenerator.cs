@@ -1097,36 +1097,25 @@ namespace Win32InteropBuilder.Generators
             context.CurrentWriter.WriteLine();
             context.CurrentWriter.WithParens(() =>
             {
-                var types = new List<InterfaceType>
+                for (var i = 0; i < extension.Methods.Count; i++)
                 {
-                    (InterfaceType)extension.RootType
-                };
-
-                types.AddRange(extension.Types.Cast<InterfaceType>().OrderBy(t => t, BuilderTypeHierarchyComparer.Instance));
-                foreach (var type in types)
-                {
-                    context.CurrentWriter.WriteLine("// " + type.Name);
-                    for (var i = 0; i < type.Methods.Count; i++)
+                    var method = extension.Methods[i];
+                    GenerateExtension(context, extension, method);
+                    if (i != extension.Methods.Count - 1)
                     {
-                        var method = type.Methods[i];
-                        GenerateExtension(context, extension, type, method);
-                        if (i != type.Methods.Count - 1)
-                        {
-                            context.CurrentWriter.WriteLine();
-                        }
+                        context.CurrentWriter.WriteLine();
                     }
                 }
             });
         }
 
-        protected virtual void GenerateExtension(BuilderContext context, BuilderTypeExtension extension, InterfaceType type, BuilderMethod method)
+        protected virtual void GenerateExtension(BuilderContext context, BuilderTypeExtension extension, BuilderTypeExtensionMethod method)
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(context.CurrentWriter);
             ArgumentNullException.ThrowIfNull(context.Configuration);
             ArgumentNullException.ThrowIfNull(context.Configuration.Generation);
             ArgumentNullException.ThrowIfNull(extension);
-            ArgumentNullException.ThrowIfNull(type);
             ArgumentNullException.ThrowIfNull(method);
 
             string returnTypeName;

@@ -45,6 +45,9 @@ namespace Win32InteropBuilder.Model
             {
                 var fieldDef = context.MetadataReader.GetFieldDefinition(handle);
                 var field = context.CreateBuilderField(context.MetadataReader.GetString(fieldDef.Name));
+                if (field == null)
+                    continue;
+
                 field.Handle = handle;
                 field.Type = fieldDef.DecodeSignature(context.SignatureTypeProvider, null);
                 if (fieldDef.Attributes.HasFlag(FieldAttributes.RTSpecialName))

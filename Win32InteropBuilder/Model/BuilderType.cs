@@ -247,6 +247,9 @@ namespace Win32InteropBuilder.Model
 
                 var methodDef = context.MetadataReader.GetMethodDefinition(handle);
                 var method = context.CreateBuilderMethod(context.MetadataReader.GetString(methodDef.Name));
+                if (method == null)
+                    continue;
+
                 method.Handle = handle;
                 method.Attributes = methodDef.Attributes;
                 method.ImplAttributes = methodDef.ImplAttributes;
@@ -272,6 +275,9 @@ namespace Win32InteropBuilder.Model
                 {
                     var parameterDef = context.MetadataReader.GetParameter(phandle);
                     var parameter = context.CreateBuilderParameter(context.MetadataReader.GetString(parameterDef.Name), parameterDef.SequenceNumber);
+                    if (parameter == null)
+                        continue;
+
                     // remove 'this'
                     if (string.IsNullOrEmpty(parameter.Name) && parameter.SequenceNumber == 0)
                         continue;
@@ -341,6 +347,9 @@ namespace Win32InteropBuilder.Model
                 var fieldDef = context.MetadataReader.GetFieldDefinition(handle);
                 var name = context.MetadataReader.GetString(fieldDef.Name);
                 var field = context.CreateBuilderField(name);
+                if (field == null)
+                    continue;
+
                 field.Handle = handle;
                 field.Type = fieldDef.DecodeSignature(context.SignatureTypeProvider, null);
                 field.Attributes = fieldDef.Attributes;
@@ -505,6 +514,9 @@ namespace Win32InteropBuilder.Model
         {
             ArgumentNullException.ThrowIfNull(context);
             var clone = CloneType(context, fullName);
+            if (clone == null)
+                throw new InvalidOperationException();
+
             CopyTo(clone);
             return clone;
         }

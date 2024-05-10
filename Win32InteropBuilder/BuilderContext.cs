@@ -55,6 +55,8 @@ namespace Win32InteropBuilder
         public virtual BuilderParameter CreateBuilderParameter(string name, int sequenceNumber) => new(name, sequenceNumber);
         public virtual BuilderField CreateBuilderField(string name) => new(name);
         public virtual BuilderType CreateInlineArrayType(BuilderType elementType, int size, FullName? fullName = null) => new InlineArrayType(elementType, size, fullName);
+        public virtual BuilderTypeExtension CreateTypeExtension(BuilderType rootType) => new(rootType);
+        public virtual BuilderTypeExtensionMethod CreateTypeExtensionMethod(BuilderMethod method) => new(method);
 
         public virtual FullName GetFullName(TypeDefinition typeDef)
         {
@@ -208,6 +210,8 @@ namespace Win32InteropBuilder
 
             return true;
         }
+
+        public virtual bool HasExtensions(BuilderTypeExtension extension, BuilderType type, BuilderMethod method) => true;
 
         // last error is globally not well defined in Win32metadata
         // so the logic is to set it when it's not defined even if it's not always ok
