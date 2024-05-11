@@ -652,6 +652,10 @@ namespace Win32InteropBuilder.Generators
                 setLastError = context.HasSetLastError(method);
             }
 
+            if (method.Name == "SafeArrayCreate")
+            {
+            }
+
             var methodPatch = context.Configuration.Patches?.Methods?.FirstOrDefault(m => m.Matches(method));
             methodPatch ??= patch?.Methods?.FirstOrDefault(m => m.Matches(method));
             if (methodPatch != null)
@@ -706,17 +710,24 @@ namespace Win32InteropBuilder.Generators
                 if (method.ReturnType != null && method.ReturnType != WellKnownTypes.SystemVoid)
                 {
                     var mapped = context.MapType(method.ReturnType);
-                    var um = mapped.UnmanagedType;
-                    if (Configuration.MarshalAsError(mapped.FullName))
+                    if (mapped.Indirections > 0)
                     {
-                        um = UnmanagedType.Error;
+                        returnTypeName = "nint";
                     }
+                    else
+                    {
+                        var um = mapped.UnmanagedType;
+                        if (Configuration.MarshalAsError(mapped.FullName))
+                        {
+                            um = UnmanagedType.Error;
+                        }
 
-                    if (um.HasValue && (!method.Attributes.HasFlag(MethodAttributes.Static) || mapped == WellKnownTypes.SystemBoolean))
-                    {
-                        context.CurrentWriter.WriteLine($"[return: MarshalAs(UnmanagedType.{um.Value})]");
+                        if (um.HasValue && (!method.Attributes.HasFlag(MethodAttributes.Static) || mapped == WellKnownTypes.SystemBoolean))
+                        {
+                            context.CurrentWriter.WriteLine($"[return: MarshalAs(UnmanagedType.{um.Value})]");
+                        }
+                        returnTypeName = GetTypeReferenceName(mapped.GetGeneratedName(context));
                     }
-                    returnTypeName = GetTypeReferenceName(mapped.GetGeneratedName(context));
                 }
                 else
                 {
@@ -783,18 +794,19 @@ namespace Win32InteropBuilder.Generators
             for (var i = 0; i < method1.Parameters.Count; i++)
             {
                 // hopefully context are similar
-                var def1 = GetParameterDef(context, type, method1.Parameters[i]);
-                var def2 = GetParameterDef(context, type, method2.Parameters[i]);
+                var def1 = GetParameterDef(context, type, method1, method1.Parameters[i]);
+                var def2 = GetParameterDef(context, type, method2, method2.Parameters[i]);
                 if (def1.TypeName != def2.TypeName || def1.Direction != def2.Direction)
                     return false;
             }
             return true;
         }
 
-        protected virtual ParameterDef GetParameterDef(BuilderContext context, BuilderType type, BuilderParameter parameter)
+        protected virtual ParameterDef GetParameterDef(BuilderContext context, BuilderType type, BuilderMethod method, BuilderParameter parameter)
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(parameter);
+            ArgumentNullException.ThrowIfNull(method);
             ArgumentNullException.ThrowIfNull(type);
             if (parameter.Type == null)
                 throw new InvalidOperationException();
@@ -1004,7 +1016,7 @@ namespace Win32InteropBuilder.Generators
             if (parameter.Type == null)
                 throw new InvalidOperationException();
 
-            var def = GetParameterDef(context, type, parameter);
+            var def = GetParameterDef(context, type, method, parameter);
 
             var defPatch = methodPatch?.Parameters?.FirstOrDefault(p => p.Matches(parameter, parameterIndex))?.Def;
             if (defPatch != null)

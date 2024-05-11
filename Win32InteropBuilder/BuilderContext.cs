@@ -135,10 +135,16 @@ namespace Win32InteropBuilder
         public virtual BuilderType MapType(BuilderType type)
         {
             ArgumentNullException.ThrowIfNull(type);
-            if (MappedTypes.TryGetValue(type.FullName, out var mapped))
-                return mapped;
+            if (!MappedTypes.TryGetValue(type.FullName, out var mapped))
+                return type;
 
-            return type;
+            if (type.Indirections > 0)
+            {
+                var clone = mapped.Clone(this);
+                clone.Indirections = type.Indirections;
+                return clone;
+            }
+            return mapped;
         }
 
         public virtual FullName MapGeneratedFullName(FullName fullName)
