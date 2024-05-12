@@ -807,10 +807,6 @@ namespace Win32InteropBuilder.Generators
             if (parameter.Type == null)
                 throw new InvalidOperationException();
 
-            if (parameter.Name == "wzFriendlyName")
-            {
-            }
-
             var def = new ParameterDef();
             var mapped = context.MapType(parameter.Type);
             def.TypeName = GetTypeReferenceName(mapped.GetGeneratedName(context));
@@ -961,11 +957,13 @@ namespace Win32InteropBuilder.Generators
                         def.IsIn = true;
                     }
                     else if (!parameter.NativeArray.CountParameter.Attributes.HasFlag(ParameterAttributes.Out) &&
-                        parameter.Type is not InterfaceType &&
+                        //parameter.Type is not InterfaceType &&
                         parameter.Type.Indirections > 0
                         && parameter.Attributes.HasFlag(ParameterAttributes.Out))
                     {
-                        def.Direction = ParameterDirection.Ref;
+                        def.Direction = null;
+                        def.IsOut = true;
+                        def.IsIn = true;
                     }
                 }
                 else if (parameter.NativeArray.CountConst.HasValue)
