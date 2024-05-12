@@ -652,10 +652,6 @@ namespace Win32InteropBuilder.Generators
                 setLastError = context.HasSetLastError(method);
             }
 
-            if (method.Name == "SafeArrayCreate")
-            {
-            }
-
             var methodPatch = context.Configuration.Patches?.Methods?.FirstOrDefault(m => m.Matches(method));
             methodPatch ??= patch?.Methods?.FirstOrDefault(m => m.Matches(method));
             if (methodPatch != null)
@@ -811,6 +807,10 @@ namespace Win32InteropBuilder.Generators
             if (parameter.Type == null)
                 throw new InvalidOperationException();
 
+            if (parameter.Name == "wzFriendlyName")
+            {
+            }
+
             var def = new ParameterDef();
             var mapped = context.MapType(parameter.Type);
             def.TypeName = GetTypeReferenceName(mapped.GetGeneratedName(context));
@@ -946,7 +946,12 @@ namespace Win32InteropBuilder.Generators
                     def.MarshalAs = null;
                 }
 
-                def.TypeName += "[]";
+                var implicitArray = IsArrayType(mapped) && parameter.Type.Indirections == 0;
+                if (!implicitArray)
+                {
+                    def.TypeName += "[]";
+                }
+
                 if (parameter.NativeArray.CountParameter != null)
                 {
                     def.MarshalUsing = new ParameterMarshalUsing { CountElementName = parameter.NativeArray.CountParameter.Name };
@@ -954,6 +959,13 @@ namespace Win32InteropBuilder.Generators
                     {
                         def.IsOut = true;
                         def.IsIn = true;
+                    }
+                    else if (!parameter.NativeArray.CountParameter.Attributes.HasFlag(ParameterAttributes.Out) &&
+                        parameter.Type is not InterfaceType &&
+                        parameter.Type.Indirections > 0
+                        && parameter.Attributes.HasFlag(ParameterAttributes.Out))
+                    {
+                        def.Direction = ParameterDirection.Ref;
                     }
                 }
                 else if (parameter.NativeArray.CountConst.HasValue)
@@ -964,6 +976,10 @@ namespace Win32InteropBuilder.Generators
                         def.IsOut = true;
                         def.IsIn = true;
                     }
+                    else if (parameter.Type.Indirections > 0 && parameter.Attributes.HasFlag(ParameterAttributes.Out))
+                    {
+                        def.Direction = ParameterDirection.Ref;
+                    }
                 }
                 else
                 {
@@ -973,6 +989,12 @@ namespace Win32InteropBuilder.Generators
                     }
                     else
                         throw new NotSupportedException();
+                }
+
+                if (implicitArray)
+                {
+                    def.IsIn = null;
+                    def.IsOut = null;
                 }
                 return context.GetParameterDef(parameter, def);
             }
@@ -1004,6 +1026,12 @@ namespace Win32InteropBuilder.Generators
             }
 
             return context.GetParameterDef(parameter, def);
+        }
+
+        protected virtual bool IsArrayType(BuilderType type)
+        {
+            ArgumentNullException.ThrowIfNull(type);
+            return type.FullName == FullName.PWSTR || type.FullName == FullName.PSTR || type.FullName == FullName.BSTR;
         }
 
         protected virtual void GenerateCode(BuilderContext context, BuilderType type, BuilderMethod method, BuilderPatchMember? methodPatch, BuilderParameter parameter, int parameterIndex)
