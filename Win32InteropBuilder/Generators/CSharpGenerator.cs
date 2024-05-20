@@ -727,7 +727,14 @@ namespace Win32InteropBuilder.Generators
                 }
                 else
                 {
-                    returnTypeName = "void";
+                    if (method.ReturnType?.Indirections > 0)
+                    {
+                        returnTypeName = "nint";
+                    }
+                    else
+                    {
+                        returnTypeName = "void";
+                    }
                 }
             }
 
