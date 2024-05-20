@@ -828,8 +828,7 @@ namespace Win32InteropBuilder.Generators
                     case ComOutPtrTarget.UniqueObject:
                         return context.GetParameterDef(parameter, new ParameterDef
                         {
-                            Direction =
-                            ParameterDirection.Out,
+                            Direction = ParameterDirection.Out,
                             TypeName = "object",
                             MarshalUsing = new ParameterMarshalUsing { TypeName = "UniqueComInterfaceMarshaller<object>" },
                             Comments = $" /* {def.TypeName} */"
@@ -837,7 +836,12 @@ namespace Win32InteropBuilder.Generators
 
                     // case ComOutPtrTarget.IntPtr
                     default:
-                        return context.GetParameterDef(parameter, def);
+                        return context.GetParameterDef(parameter, new ParameterDef
+                        {
+                            Direction = ParameterDirection.Out,
+                            TypeName = "nint",
+                            Comments = $" /* {def.TypeName} */"
+                        });
                 }
             }
 
