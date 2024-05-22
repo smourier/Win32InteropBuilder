@@ -50,7 +50,8 @@ namespace Win32InteropBuilder
 
         public class BuilderGeneration
         {
-            public virtual ComOutPtrTarget ComOutPtrTarget { get; set; } = ComOutPtrTarget.IntPtr;
+            public virtual ComOutPtrTarget UnknownComOutPtrTarget { get; set; } = ComOutPtrTarget.IntPtr;
+            public virtual ComOutPtrTarget ComOutPtrTarget { get; set; } = ComOutPtrTarget.Object; // Move to this ComOutPtrTarget.UniqueObject when https://github.com/dotnet/runtime/issues/96901
             public virtual bool AddNullToIntPtrValueTypes { get; set; } = true;
             public virtual bool AddNullableEnable { get; set; } = true;
             public virtual UnifiedGeneration Unified { get; set; } = new();

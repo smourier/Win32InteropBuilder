@@ -820,7 +820,7 @@ namespace Win32InteropBuilder.Generators
             var isUnknownComOutPtr = parameter.IsComOutPtr && (parameter.Type == WellKnownTypes.SystemVoid || parameter.Type == WellKnownTypes.SystemObject);
             if (isUnknownComOutPtr)
             {
-                var copTarget = context.Configuration.Generation.ComOutPtrTarget;
+                var copTarget = context.Configuration.Generation.UnknownComOutPtrTarget;
                 switch (copTarget)
                 {
                     case ComOutPtrTarget.Object:
@@ -1045,6 +1045,18 @@ namespace Win32InteropBuilder.Generators
             if (isOptional && def.TypeName != IntPtrTypeName && !parameter.Type.IsValueType)
             {
                 def.TypeName += "?";
+            }
+
+            if (parameter.Type is InterfaceType && def.Direction == ParameterDirection.Out)
+            {
+                var copTarget = context.Configuration.Generation.ComOutPtrTarget;
+                if (copTarget == ComOutPtrTarget.UniqueObject)
+                    return context.GetParameterDef(parameter, new ParameterDef
+                    {
+                        TypeName = def.TypeName,
+                        Direction = ParameterDirection.Out,
+                        MarshalUsing = new ParameterMarshalUsing { TypeName = $"UniqueComInterfaceMarshaller<{def.TypeName}>" },
+                    });
             }
 
             return context.GetParameterDef(parameter, def);
