@@ -1031,9 +1031,14 @@ namespace Win32InteropBuilder.Generators
             var isOptional = parameter.Attributes.HasFlag(ParameterAttributes.Optional);
 
             // typically the case of P(W)STR passed as pointers to memory, must not be marked as "out"
-            if (isOptional && def.Direction == ParameterDirection.Out && parameter.BytesParamIndex.HasValue)
+            //if (isOptional && def.Direction == ParameterDirection.Out && parameter.BytesParamIndex.HasValue)
+            if (def.Direction == ParameterDirection.Out && parameter.BytesParamIndex.HasValue)
             {
                 def.Direction = null;
+                if (mapped.Indirections > 0)
+                {
+                    def.TypeName = "nint";
+                }
             }
 
             // don't set ? on value type as this creates a Nullable<struct> which is managed/non-blittable
