@@ -370,7 +370,12 @@ namespace Win32InteropBuilder.Generators
 
             if (lk.HasValue)
             {
-                context.CurrentWriter.WriteLine($"[StructLayout(LayoutKind.{lk})]");
+                string? pack = null;
+                if (type.PackingSize.HasValue)
+                {
+                    pack = $", Pack = {type.PackingSize.Value}";
+                }
+                context.CurrentWriter.WriteLine($"[StructLayout(LayoutKind.{lk}{pack})]");
             }
 
             var ns = type.FullName.NestedName;

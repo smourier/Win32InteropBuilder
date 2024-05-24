@@ -155,6 +155,16 @@ namespace Win32InteropBuilder.Model
             IsHandle = context.IsHandleType(this, typeDef);
             TypeAttributes = typeDef.Attributes;
             IsNested = typeDef.IsNested;
+
+            if (this is StructureType structure)
+            {
+                var layout = typeDef.GetLayout();
+                if (layout.PackingSize != 0)
+                {
+                    structure.PackingSize = layout.PackingSize;
+                }
+            }
+
             context.TypesToBuild.Add(this);
 
             context.CurrentTypes.Push(this);
