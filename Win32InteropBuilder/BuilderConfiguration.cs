@@ -52,7 +52,6 @@ namespace Win32InteropBuilder
         {
             public virtual ComOutPtrTarget UnknownComOutPtrTarget { get; set; } = ComOutPtrTarget.IntPtr;
             public virtual ComOutPtrTarget ComOutPtrTarget { get; set; } = ComOutPtrTarget.UniqueObject;
-            public virtual bool AddNullToIntPtrValueTypes { get; set; } = true;
             public virtual bool AddNullableEnable { get; set; } = true;
             public virtual UnifiedGeneration Unified { get; set; } = new();
             public virtual IList<BuilderTypeInput> InterfaceExtensions { get; set; } = [];

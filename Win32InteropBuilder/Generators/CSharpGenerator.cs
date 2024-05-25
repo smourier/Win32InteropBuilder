@@ -216,10 +216,7 @@ namespace Win32InteropBuilder.Generators
             }
 
             ns = GetIdentifier(ns);
-            if (context.Configuration.Generation.AddNullToIntPtrValueTypes)
-            {
-                context.CurrentWriter.WriteLine("#nullable enable");
-            }
+            context.CurrentWriter.WriteLine("#nullable enable");
 
             context.CurrentWriter.WriteLine($"namespace {ns};");
             context.CurrentWriter.WriteLine();
@@ -378,6 +375,9 @@ namespace Win32InteropBuilder.Generators
                 context.CurrentWriter.WriteLine($"[StructLayout(LayoutKind.{lk}{pack})]");
             }
 
+            var generateEquatable = type.Fields.Count == 1 && (type.Fields[0].Type == WellKnownTypes.SystemIntPtr || type.Fields[0].Type == WellKnownTypes.SystemUIntPtr);
+            var generateNull = generateEquatable;
+
             var ns = type.FullName.NestedName;
             string strucTypeName;
             if (ns != null)
@@ -388,15 +388,20 @@ namespace Win32InteropBuilder.Generators
             else
             {
                 strucTypeName = GetIdentifier(type.GetGeneratedName(context));
-                context.CurrentWriter.Write($"public partial struct {strucTypeName}");
+
+                string? derives = null;
+                if (generateEquatable)
+                {
+                    derives = $" : IEquatable<{strucTypeName}>";
+                }
+
+                context.CurrentWriter.Write($"public partial struct {strucTypeName}{derives}");
             }
 
             context.CurrentWriter.WriteLine();
             context.CurrentWriter.WithParens(() =>
             {
-                if (context.Configuration.Generation.AddNullToIntPtrValueTypes &&
-                    type.Fields.Count == 1 &&
-                    (type.Fields[0].Type == WellKnownTypes.SystemIntPtr || type.Fields[0].Type == WellKnownTypes.SystemUIntPtr))
+                if (generateNull)
                 {
                     context.CurrentWriter.WriteLine($"public static readonly {strucTypeName} Null = new();");
                     context.CurrentWriter.WriteLine();
@@ -455,6 +460,17 @@ namespace Win32InteropBuilder.Generators
                         context.CurrentWriter.Write(" // variable-length array placeholder");
                     }
                     context.CurrentWriter.WriteLine();
+                }
+
+                if (generateEquatable)
+                {
+                    var fieldName = GetIdentifier(type.Fields[0].Name);
+                    context.CurrentWriter.WriteLine();
+                    context.CurrentWriter.WriteLine($"public override readonly bool Equals(object? obj) => obj is {strucTypeName} value && Equals(value);");
+                    context.CurrentWriter.WriteLine($"public readonly bool Equals({strucTypeName} other) => other.{fieldName} == {fieldName};");
+                    context.CurrentWriter.WriteLine($"public override readonly int GetHashCode() => {fieldName}.GetHashCode();");
+                    context.CurrentWriter.WriteLine($"public static bool operator ==({strucTypeName} left, {strucTypeName} right) => left.Equals(right);");
+                    context.CurrentWriter.WriteLine($"public static bool operator !=({strucTypeName} left, {strucTypeName} right) => !left.Equals(right);");
                 }
             });
         }
@@ -540,16 +556,18 @@ namespace Win32InteropBuilder.Generators
             context.CurrentWriter.WithParens(() =>
             {
                 var elementName = type.ElementName ?? "Data";
-                var typeName = GetTypeReferenceName(type.ElementType.GetGeneratedName(context));
+                var elementTypeName = GetTypeReferenceName(type.ElementType.GetGeneratedName(context));
 
                 context.CurrentWriter.WriteLine($"public const int Length = {type.Size};");
                 context.CurrentWriter.WriteLine();
-                context.CurrentWriter.WriteLine($"public {typeName} {elementName};");
+                context.CurrentWriter.WriteLine($"public {elementTypeName} {elementName};");
 
-                if (typeName == "char")
+                if (elementTypeName == "char")
                 {
                     context.CurrentWriter.WriteLine();
                     context.CurrentWriter.WriteLine($"public override readonly string ToString() => ((ReadOnlySpan<char>)this).ToString().TrimEnd('\\0');");
+                    context.CurrentWriter.WriteLine($"public void CopyFrom(string? str) => DirectNExtensions.CopyFrom<{typeName}>(str, this, Length);");
+                    context.CurrentWriter.WriteLine($"public static implicit operator {typeName}(string? str) {{ var n = new {typeName}(); n.CopyFrom(str); return n; }}");
                 }
             });
         }
