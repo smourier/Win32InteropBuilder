@@ -12,6 +12,7 @@ namespace Win32InteropBuilder.Model
         public virtual bool? IsIn { get; set; }
         public virtual bool? IsOut { get; set; }
         public virtual bool IsNullDirection { get; set; } // only for patches
+        public bool IsArrayTypeName => TypeName?.EndsWith("[]") == true;
 
         public virtual void PatchFrom(ParameterDef patch)
         {

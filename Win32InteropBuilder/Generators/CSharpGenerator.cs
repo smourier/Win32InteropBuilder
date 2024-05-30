@@ -991,9 +991,7 @@ namespace Win32InteropBuilder.Generators
                         def.IsIn = true;
                     }
                     else if (!parameter.NativeArray.CountParameter.Attributes.HasFlag(ParameterAttributes.Out) &&
-                        //parameter.Type is not InterfaceType &&
                         (parameter.Type.Indirections > 0 || implicitArray))
-                    //&& parameter.Attributes.HasFlag(ParameterAttributes.Out))
                     {
                         def.Direction = null;
                         if (parameter.Attributes.HasFlag(ParameterAttributes.Out))
@@ -1035,6 +1033,12 @@ namespace Win32InteropBuilder.Generators
                 {
                     def.IsIn = null;
                     def.IsOut = null;
+                }
+
+                if (def.Direction == ParameterDirection.In && def.IsArrayTypeName)
+                {
+                    def.Direction = null;
+                    def.IsIn = true;
                 }
                 return context.GetParameterDef(parameter, def);
             }
