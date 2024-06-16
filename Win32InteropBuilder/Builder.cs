@@ -310,7 +310,7 @@ namespace Win32InteropBuilder
         protected virtual void AddMappedTypes(BuilderContext context)
         {
             ArgumentNullException.ThrowIfNull(context);
-            context.MappedTypes[FullName.BOOL] = WellKnownTypes.SystemBoolean;
+            //context.MappedTypes[FullName.BOOL] = WellKnownTypes.SystemBoolean;
             context.MappedTypes[FullName.DECIMAL] = WellKnownTypes.SystemDecimal;
             context.MappedTypes[FullName.IUnknown] = WellKnownTypes.SystemIntPtr;
             context.MappedTypes[FullName.FARPROC] = WellKnownTypes.SystemIntPtr;
