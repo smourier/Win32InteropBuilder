@@ -375,7 +375,10 @@ namespace Win32InteropBuilder.Generators
                 context.CurrentWriter.WriteLine($"[StructLayout(LayoutKind.{lk}{pack})]");
             }
 
-            var generateEquatable = type.Fields.Count == 1 && (type.Fields[0].Type == WellKnownTypes.SystemIntPtr || type.Fields[0].Type == WellKnownTypes.SystemUIntPtr);
+            var generateEquatable = type.Fields.Count == 1 && (
+                type.Fields[0].Type == WellKnownTypes.SystemVoid ||
+                type.Fields[0].Type == WellKnownTypes.SystemIntPtr ||
+                type.Fields[0].Type == WellKnownTypes.SystemUIntPtr);
             var generateNull = generateEquatable;
 
             var ns = type.FullName.NestedName;
