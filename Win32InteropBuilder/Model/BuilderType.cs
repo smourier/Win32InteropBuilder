@@ -16,8 +16,8 @@ namespace Win32InteropBuilder.Model
 
         private readonly List<BuilderMethod> _methods = [];
         private readonly List<BuilderField> _fields = [];
-        private readonly List<BuilderType> _interfaces = [];
-        private readonly List<BuilderType> _nestedTypes = [];
+        private readonly List<FullName> _interfaces = [];
+        private readonly List<FullName> _nestedTypes = [];
         private readonly HashSet<MethodDefinitionHandle> _includedMethods = [];
         private readonly HashSet<MethodDefinitionHandle> _excludedMethods = [];
         private readonly HashSet<FieldDefinitionHandle> _includedFields = [];
@@ -51,12 +51,10 @@ namespace Win32InteropBuilder.Model
         public virtual bool IsNested { get; set; }
         public virtual bool IsValueType { get; set; }
         public virtual bool IsHandle { get; set; }
-        public virtual int Indirections { get; set; }
-        public virtual ArrayShape? ArrayShape { get; set; }
         public virtual IList<BuilderMethod> Methods => _methods;
         public virtual IList<BuilderField> Fields => _fields;
-        public virtual IList<BuilderType> Interfaces => _interfaces;
-        public virtual IList<BuilderType> NestedTypes => _nestedTypes;
+        public virtual IList<FullName> Interfaces => _interfaces;
+        public virtual IList<FullName> NestedTypes => _nestedTypes;
         public virtual ISet<MethodDefinitionHandle> IncludedMethods => _includedMethods; // if empty => all methods
         public virtual ISet<MethodDefinitionHandle> ExcludedMethods => _excludedMethods;
         public virtual ISet<FieldDefinitionHandle> IncludedFields => _includedFields; // if empty => all fields
@@ -68,17 +66,16 @@ namespace Win32InteropBuilder.Model
         public virtual UnmanagedType? UnmanagedType { get; set; }
         public virtual PrimitiveTypeCode PrimitiveTypeCode { get; set; } = PrimitiveTypeCode.Object;
 
-        public virtual IEnumerable<BuilderType> AllInterfaces
+        public virtual IEnumerable<FullName> GetAllInterfaces(BuilderContext context)
         {
-            get
+            ArgumentNullException.ThrowIfNull(context);
+            foreach (var iface in Interfaces)
             {
-                foreach (var iface in Interfaces)
+                yield return iface;
+                var ifaceType = context.AllTypes[iface];
+                foreach (var child in ifaceType.GetAllInterfaces(context))
                 {
-                    yield return iface;
-                    foreach (var child in iface.AllInterfaces)
-                    {
-                        yield return child;
-                    }
+                    yield return child;
                 }
             }
         }
@@ -165,7 +162,7 @@ namespace Win32InteropBuilder.Model
                 }
             }
 
-            context.TypesToBuild.Add(this);
+            context.TypesToBuild.Add(FullName);
 
             context.CurrentTypes.Push(this);
             try
@@ -228,9 +225,9 @@ namespace Win32InteropBuilder.Model
                 context.CurrentTypes.Push(nestedType);
                 try
                 {
-                    if (!context.TypesToBuild.TryGetValue(nestedType, out var existing))
+                    if (!context.TypesToBuild.TryGetValue(nestedType.FullName, out var existing))
                     {
-                        existing = nestedType;
+                        existing = nestedType.FullName;
                         context.AddDependencies(existing);
                     }
 
@@ -303,10 +300,10 @@ namespace Win32InteropBuilder.Model
                 method.SortAndResolveParameters();
 
                 var dec = methodDef.DecodeSignature(context.SignatureTypeProvider, null);
-                method.ReturnType = dec.ReturnType;
-                if (method.ReturnType != null)
+                method.ReturnTypeFullName = dec.ReturnType.FullName;
+                if (method.ReturnTypeFullName != null)
                 {
-                    context.AddDependencies(method.ReturnType);
+                    context.AddDependencies(method.ReturnTypeFullName);
                 }
 
                 if (method.Parameters.Count != dec.ParameterTypes.Length)
@@ -314,11 +311,12 @@ namespace Win32InteropBuilder.Model
 
                 for (var i = 0; i < method.Parameters.Count; i++)
                 {
-                    method.Parameters[i].Type = dec.ParameterTypes[i];
-                    if (method.Parameters[i].Type == null)
+                    var fn = dec.ParameterTypes[i].FullName;
+                    if (fn == null)
                         throw new InvalidOperationException();
 
-                    context.AddDependencies(method.Parameters[i].Type!);
+                    method.Parameters[i].TypeFullName = fn;
+                    context.AddDependencies(fn);
                 }
             }
         }
@@ -328,19 +326,36 @@ namespace Win32InteropBuilder.Model
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(context.MetadataReader);
 
+            var ifaceType = this as InterfaceType;
+            if (FullName == FullName.IUnknown)
+            {
+                ifaceType!.IsIUnknownDerived = true;
+                return;
+            }
+
             var interfaces = typeDef.GetInterfaceImplementations();
             foreach (var iface in interfaces)
             {
                 var fn = context.MetadataReader.GetFullName(iface);
-                if (fn == FullName.IUnknown && this is InterfaceType ifaceType)
+                if (ifaceType != null && fn == FullName.IUnknown)
                 {
                     ifaceType.IsIUnknownDerived = true;
                     continue;
                 }
 
-                var typeRefType = context.AllTypes[fn];
-                context.AddDependencies(typeRefType);
-                Interfaces.Add(typeRefType);
+                if (ifaceType != null && fn == FullName.IDispatch)
+                {
+                    ifaceType.IsIUnknownDerived = true;
+                    // don't continue
+                }
+
+                context.AddDependencies(fn);
+                Interfaces.Add(fn);
+            }
+
+            if (ifaceType != null && !ifaceType.IsIUnknownDerived)
+            {
+                ifaceType.IsIUnknownDerived = context.IsIUnknownDerived(typeDef);
             }
         }
 
@@ -361,7 +376,8 @@ namespace Win32InteropBuilder.Model
                     continue;
 
                 field.Handle = handle;
-                field.Type = fieldDef.DecodeSignature(context.SignatureTypeProvider, null);
+                var type = fieldDef.DecodeSignature(context.SignatureTypeProvider, null);
+                field.TypeFullName = type.FullName;
                 field.Attributes = fieldDef.Attributes;
                 field.DefaultValueAsBytes = context.MetadataReader.GetConstantBytes(fieldDef.GetDefaultValue());
                 field.IsFlexibleArray = context.MetadataReader.IsFlexibleArray(fieldDef.GetCustomAttributes());
@@ -375,7 +391,7 @@ namespace Win32InteropBuilder.Model
                 if (field.DefaultValueAsBytes == null)
                 {
                     // bit of a hack for guids
-                    if (field.Type.FullName == WellKnownTypes.SystemGuid.FullName)
+                    if (field.TypeFullName == WellKnownTypes.SystemGuid.FullName)
                     {
                         var guid = context.GetMetadataGuid(fieldDef.GetCustomAttributes());
                         if (guid.HasValue)
@@ -395,7 +411,7 @@ namespace Win32InteropBuilder.Model
                 }
 
                 Fields.Add(field);
-                context.AddDependencies(field.Type);
+                context.AddDependencies(field.TypeFullName);
             }
         }
 
@@ -480,7 +496,9 @@ namespace Win32InteropBuilder.Model
             if (IOUtilities.PathIsFile(typePath))
             {
                 var existingText = EncodingDetector.ReadAllText(typePath, context.Configuration.EncodingDetectorMode, out _);
-                if (text == existingText)
+
+                // remove ws for comparison to avoid stupid git mangling with end-of-lines
+                if (text.EqualsWithoutWhitespaces(existingText))
                     return typePath;
             }
 
@@ -543,8 +561,6 @@ namespace Win32InteropBuilder.Model
             copy.IsGenerated = IsGenerated;
             copy.IsNested = IsNested;
             copy.IsValueType = IsValueType;
-            copy.Indirections = Indirections;
-            copy.ArrayShape = ArrayShape;
             copy.Methods.AddRange(Methods);
             copy.Fields.AddRange(Fields);
             copy.Interfaces.AddRange(Interfaces);
@@ -560,8 +576,9 @@ namespace Win32InteropBuilder.Model
             copy.PrimitiveTypeCode = PrimitiveTypeCode;
         }
 
-        public object? GetValue(byte[]? bytes)
+        public object? GetValue(BuilderContext context, byte[]? bytes)
         {
+            ArgumentNullException.ThrowIfNull(context);
             if (bytes == null || bytes.Length == 0)
                 return null;
 
@@ -609,12 +626,18 @@ namespace Win32InteropBuilder.Model
                 return new Guid(bytes);
 
             if (this is StructureType structureType && structureType.Fields.Count == 1)
-                return structureType.Fields[0].Type?.GetValue(bytes);
+            {
+                var type = context.AllTypes[structureType.Fields[0].TypeFullName!.NoPointerFullName];
+                return type.GetValue(context, bytes);
+            }
 
             if (this is EnumType enumType)
             {
-                if (enumType.UnderlyingType != null)
-                    return enumType.UnderlyingType.GetValue(bytes);
+                if (enumType.UnderlyingTypeFullName != null)
+                {
+                    var type = context.AllTypes[enumType.UnderlyingTypeFullName];
+                    return type.GetValue(context, bytes);
+                }
             }
 
             //throw new NotSupportedException($"Bytes length {bytes.Length} for type '{FullName}'.");

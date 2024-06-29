@@ -22,8 +22,8 @@ namespace Win32InteropBuilder.Model
         {
             if (type is EnumType enumType)
             {
-                if (enumType.UnderlyingType != null)
-                    return enumType.UnderlyingType.PrimitiveTypeCode;
+                if (enumType.UnderlyingTypeFullName != null)
+                    return Context.AllTypes[enumType.UnderlyingTypeFullName].PrimitiveTypeCode;
 
                 return PrimitiveTypeCode.Int32;
             }

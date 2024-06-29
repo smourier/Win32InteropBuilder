@@ -11,6 +11,5 @@ namespace Win32InteropBuilder.Model
 
         void Configure(JsonElement element);
         void GenerateCode(BuilderContext context, BuilderType type);
-        void GenerateExtension(BuilderContext context, BuilderTypeExtension extension);
     }
 }

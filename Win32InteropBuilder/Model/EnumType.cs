@@ -17,8 +17,8 @@ namespace Win32InteropBuilder.Model
         }
 
         public virtual bool IsFlags { get; set; }
-        public virtual BuilderType? UnderlyingType { get; set; }
-        public override bool IsValueType { get => true; }
+        public virtual FullName? UnderlyingTypeFullName { get; set; }
+        public override bool IsValueType => true;
 
         protected override internal void ResolveType(BuilderContext context, TypeDefinition typeDef)
         {
@@ -32,7 +32,7 @@ namespace Win32InteropBuilder.Model
             if (copy is EnumType typed)
             {
                 typed.IsFlags = IsFlags;
-                typed.UnderlyingType = UnderlyingType;
+                typed.UnderlyingTypeFullName = UnderlyingTypeFullName;
             }
         }
 
@@ -49,10 +49,11 @@ namespace Win32InteropBuilder.Model
                     continue;
 
                 field.Handle = handle;
-                field.Type = fieldDef.DecodeSignature(context.SignatureTypeProvider, null);
+                var type = fieldDef.DecodeSignature(context.SignatureTypeProvider, null);
+                field.TypeFullName = type.FullName;
                 if (fieldDef.Attributes.HasFlag(FieldAttributes.RTSpecialName))
                 {
-                    UnderlyingType = field.Type;
+                    UnderlyingTypeFullName = field.TypeFullName;
                     continue;
                 }
 

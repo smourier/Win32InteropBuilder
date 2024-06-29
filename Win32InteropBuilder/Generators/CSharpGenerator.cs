@@ -21,6 +21,8 @@ namespace Win32InteropBuilder.Generators
 
         private const string IntPtrTypeName = "nint";
         private const string UIntPtrTypeName = "nuint";
+        private const string VoidTypeName = "void";
+        private const string VTablePtr = "VTablePtr";
 
         public override string ToString() => Name;
         public virtual void Configure(JsonElement element)
@@ -283,10 +285,10 @@ namespace Win32InteropBuilder.Generators
                 for (var i = 0; i < type.Fields.Count; i++)
                 {
                     var field = type.Fields[i];
-                    if (field.Type == null)
+                    if (field.TypeFullName == null)
                         throw new InvalidOperationException();
 
-                    if (!Configuration.IsSupportedAsConstant(field.Type.FullName))
+                    if (!Configuration.IsSupportedAsConstant(field.TypeFullName))
                         continue;
 
                     if (field.Documentation != null)
@@ -294,14 +296,18 @@ namespace Win32InteropBuilder.Generators
                         context.CurrentWriter.WriteLine("// " + field.Documentation);
                     }
 
-                    var mapped = context.MapType(field.Type);
+                    var mapped = context.MapType(field.TypeFullName);
                     if (mapped.UnmanagedType.HasValue)
                     {
                         context.CurrentWriter.WriteLine($"[MarshalAs(UnmanagedType.{mapped.UnmanagedType.Value})]");
                     }
 
-                    var constText = field.Attributes.HasFlag(FieldAttributes.Literal) && context.IsConstableType(field.Type) ? "const" : "static readonly";
-                    context.CurrentWriter.WriteLine($"public {constText} {GetTypeReferenceName(mapped.GetGeneratedName(context))} {GetIdentifier(field.Name)} = {GetValueAsString(context, field.Type, field.DefaultValue)};");
+                    if (field.Name == "IDI_APPLICATION")
+                    {
+                    }
+                    var constText = field.Attributes.HasFlag(FieldAttributes.Literal) && context.IsConstableType(field.TypeFullName) ? "const" : "static readonly";
+                    var vas = GetValueAsString(context, context.AllTypes[field.TypeFullName], field.GetDefaultValue(context));
+                    context.CurrentWriter.WriteLine($"public {constText} {GetTypeReferenceName(mapped.GetGeneratedName(context))} {GetIdentifier(field.Name)} = {vas};");
 
                     if (i != type.Fields.Count - 1 || type.Methods.Count > 0)
                     {
@@ -376,9 +382,9 @@ namespace Win32InteropBuilder.Generators
             }
 
             var generateEquatable = type.Fields.Count == 1 && (
-                type.Fields[0].Type == WellKnownTypes.SystemVoid ||
-                type.Fields[0].Type == WellKnownTypes.SystemIntPtr ||
-                type.Fields[0].Type == WellKnownTypes.SystemUIntPtr);
+                type.Fields[0].TypeFullName!.NoPointerFullName == WellKnownTypes.SystemVoid.FullName ||
+                type.Fields[0].TypeFullName!.NoPointerFullName == WellKnownTypes.SystemIntPtr.FullName ||
+                type.Fields[0].TypeFullName!.NoPointerFullName == WellKnownTypes.SystemUIntPtr.FullName);
             var generateNull = generateEquatable;
 
             var ns = type.FullName.NestedName;
@@ -412,7 +418,7 @@ namespace Win32InteropBuilder.Generators
 
                 for (var i = 0; i < type.NestedTypes.Count; i++)
                 {
-                    var nt = type.NestedTypes[i];
+                    var nt = context.AllTypes[type.NestedTypes[i]];
                     GenerateTypeCode(context, nt);
                     if (i <= type.NestedTypes.Count || type.Fields.Count > 0)
                     {
@@ -423,10 +429,10 @@ namespace Win32InteropBuilder.Generators
                 for (var i = 0; i < type.Fields.Count; i++)
                 {
                     var field = type.Fields[i];
-                    if (field.Type == null)
+                    if (field.TypeFullName == null)
                         throw new InvalidOperationException();
 
-                    var mapped = context.MapType(field.Type);
+                    var mapped = context.MapType(field.TypeFullName);
 
                     var addSep = mapped.UnmanagedType.HasValue || field.Offset.HasValue;
                     if (addSep && i > 0)
@@ -451,7 +457,7 @@ namespace Win32InteropBuilder.Generators
                     else
                     {
                         var typeName = GetTypeReferenceName(mapped.GetGeneratedName(context));
-                        if (mapped.Indirections > 0)
+                        if (mapped is PointerType)
                         {
                             typeName = IntPtrTypeName;
                         }
@@ -497,9 +503,9 @@ namespace Win32InteropBuilder.Generators
                 context.CurrentWriter.WriteLine($"[UnmanagedFunctionPointer(CallingConvention.{cc})]");
 
                 string typeName;
-                if (method.ReturnType != null)
+                if (method.ReturnTypeFullName != null)
                 {
-                    var mapped = context.MapType(method.ReturnType);
+                    var mapped = context.MapType(method.ReturnTypeFullName);
 
                     if (mapped is InterfaceType)
                     {
@@ -517,7 +523,7 @@ namespace Win32InteropBuilder.Generators
                 }
                 else
                 {
-                    typeName = "void";
+                    typeName = VoidTypeName;
                 }
 
                 context.CurrentWriter.Write($"public delegate {GetTypeReferenceName(typeName)} {GetIdentifier(type.GetGeneratedName(context))}(");
@@ -527,12 +533,12 @@ namespace Win32InteropBuilder.Generators
 
                     if (parameter.Attributes.HasFlag(ParameterAttributes.Out))
                     {
-                        parameter.Type = WellKnownTypes.SystemIntPtr;
+                        parameter.TypeFullName = WellKnownTypes.SystemIntPtr.FullName;
                         parameter.Attributes &= ~ParameterAttributes.Out;
                     }
 
                     var methodPatch = patch?.Methods?.FirstOrDefault(m => m.Matches(method));
-                    GenerateCode(context, type, method, methodPatch, parameter, j);
+                    GenerateCode(context, type, method, methodPatch, parameter, j, CSharpGeneratorParameterOptions.None);
                     if (j != method.Parameters.Count - 1)
                     {
                         context.CurrentWriter.Write(", ");
@@ -575,6 +581,51 @@ namespace Win32InteropBuilder.Generators
             });
         }
 
+        protected virtual void GenerateInterfaceMethods(BuilderContext context, InterfaceType type, int startSlot)
+        {
+            ArgumentNullException.ThrowIfNull(context);
+            ArgumentNullException.ThrowIfNull(context.CurrentWriter);
+            ArgumentNullException.ThrowIfNull(type);
+
+            var identifier = GetIdentifier(type.GetGeneratedName(context));
+            var patch = context.Configuration.GetTypePatch(type);
+
+            for (var i = 0; i < type.Methods.Count; i++)
+            {
+                var method = type.Methods[i];
+                var methodReturn = GenerateCode(context, type, patch, method,
+                    CSharpGeneratorMethodOptions.ForImplementation |
+                    CSharpGeneratorMethodOptions.Public |
+                    CSharpGeneratorMethodOptions.OutAsRef | // because it's more simple otherwise we'd have to copy structs variables
+                    CSharpGeneratorMethodOptions.ComOutPtrAsIntPtr | // because it's more simple
+                    CSharpGeneratorMethodOptions.Unsafe);
+                context.CurrentWriter.WithParens(() =>
+                {
+                    string? argumentsTypes = null;
+                    string? arguments = null;
+                    if (methodReturn.Parameters.Count > 0)
+                    {
+                        argumentsTypes = "," + string.Join(",", methodReturn.Parameters.Select(p => p.ToArgumentDeclaration()));
+                        arguments = ", " + string.Join(", ", methodReturn.Parameters.Select(p => p.ToArgument()));
+                    }
+
+                    string? ret = null;
+                    if (methodReturn.ReturnTypeName != VoidTypeName)
+                    {
+                        ret = "return ";
+                    }
+
+                    var slot = startSlot + i;
+                    context.CurrentWriter.WriteLine($"{ret}((delegate* unmanaged[MemberFunction]<{identifier}*{argumentsTypes}, {methodReturn.ReturnTypeName}>)(((void**){VTablePtr})[{slot}]))(({identifier}*){VTablePtr}{arguments});");
+                });
+
+                if (i != type.Methods.Count - 1)
+                {
+                    context.CurrentWriter.WriteLine();
+                }
+            }
+        }
+
         protected virtual void GenerateTypeCode(BuilderContext context, InterfaceType type)
         {
             ArgumentNullException.ThrowIfNull(context);
@@ -586,12 +637,43 @@ namespace Win32InteropBuilder.Generators
                 context.CurrentWriter.WriteLine($"[SupportedOSPlatform(\"{type.SupportedOSPlatform}\")]");
             }
 
+            if (!type.IsIUnknownDerived)
+            {
+                // there are some structs called "interfaces" that are not COM (not IUnknown/IDispatch derived), ex: ID3D12ShaderReflectionConstantBuffer
+                var identifier = GetIdentifier(type.GetGeneratedName(context));
+                context.CurrentWriter.WriteLine($"public partial struct {identifier}");
+                context.CurrentWriter.WithParens(() =>
+                {
+                    context.CurrentWriter.WriteLine($"public nint {VTablePtr};");
+                    context.CurrentWriter.WriteLine();
+                    if (type.Interfaces.Count > 1)
+                        throw new NotSupportedException();
+
+                    var slot = 0;
+                    if (type.Interfaces.Count == 1)
+                    {
+                        var baseInterface = context.AllTypes[type.Interfaces[0]] as InterfaceType;
+                        if (baseInterface != null)
+                        {
+                            context.CurrentWriter.WriteLine($"// {baseInterface.Name} methods");
+                            GenerateInterfaceMethods(context, baseInterface, slot);
+                            slot += baseInterface.Methods.Count;
+                            context.CurrentWriter.WriteLine();
+                            context.CurrentWriter.WriteLine($"// {type.Name} methods");
+                        }
+                    }
+
+                    GenerateInterfaceMethods(context, type, slot);
+                });
+                return;
+            }
+
             context.CurrentWriter.WriteLine($"[GeneratedComInterface, Guid(\"{type.Guid.GetValueOrDefault()}\")]");
             context.CurrentWriter.Write($"public partial interface {GetIdentifier(type.GetGeneratedName(context))}");
 
             if (type.Interfaces.Count > 0)
             {
-                context.CurrentWriter.Write($" : {string.Join(", ", type.Interfaces.Select(i => GetIdentifier(i.GetGeneratedName(context))))}");
+                context.CurrentWriter.Write($" : {string.Join(", ", type.Interfaces.Select(i => GetIdentifier(context.AllTypes[i].GetGeneratedName(context))))}");
             }
 
             context.CurrentWriter.WriteLine();
@@ -628,9 +710,10 @@ namespace Win32InteropBuilder.Generators
             }
 
             context.CurrentWriter.Write($"public enum {GetIdentifier(type.GetGeneratedName(context))}");
-            if (type.UnderlyingType != null)
+            if (type.UnderlyingTypeFullName != null)
             {
-                var typeName = GetTypeReferenceName(type.UnderlyingType.GetGeneratedName(context));
+                var ut = context.AllTypes[type.UnderlyingTypeFullName];
+                var typeName = GetTypeReferenceName(ut.GetGeneratedName(context));
                 if (typeName != "int")
                 {
                     context.CurrentWriter.Write($" : {typeName}");
@@ -645,17 +728,19 @@ namespace Win32InteropBuilder.Generators
                     var field = type.Fields[i];
                     context.CurrentWriter.Write(GetIdentifier(field.Name));
 
-                    if (field.DefaultValue != null)
+                    var def = field.GetDefaultValue(context);
+                    if (def != null)
                     {
                         context.CurrentWriter.Write(" = ");
-                        context.CurrentWriter.Write(GetValueAsString(context, type.UnderlyingType ?? WellKnownTypes.SystemInt32, field.DefaultValue));
+                        var ut = context.AllTypes[type.UnderlyingTypeFullName ?? WellKnownTypes.SystemInt32.FullName];
+                        context.CurrentWriter.Write(GetValueAsString(context, ut, def));
                     }
                     context.CurrentWriter.WriteLine(',');
                 }
             });
         }
 
-        protected virtual void GenerateCode(BuilderContext context, BuilderType type, BuilderPatchType? patch, BuilderMethod method)
+        protected virtual CSharpGeneratorMethod GenerateCode(BuilderContext context, BuilderType type, BuilderPatchType? patch, BuilderMethod method, CSharpGeneratorMethodOptions options = CSharpGeneratorMethodOptions.None)
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(context.CurrentWriter);
@@ -726,15 +811,25 @@ namespace Win32InteropBuilder.Generators
                 context.CurrentWriter.WriteLine($"[SupportedOSPlatform(\"{method.SupportedOSPlatform}\")]");
             }
 
-            context.CurrentWriter.WriteLine("[PreserveSig]");
+            if (!options.HasFlag(CSharpGeneratorMethodOptions.ForImplementation))
+            {
+                context.CurrentWriter.WriteLine("[PreserveSig]");
+            }
+
             if (returnTypeName == null)
             {
-                if (method.ReturnType != null && method.ReturnType != WellKnownTypes.SystemVoid)
+                if (method.ReturnTypeFullName != null && method.ReturnTypeFullName != WellKnownTypes.SystemVoid.FullName)
                 {
-                    var mapped = context.MapType(method.ReturnType);
-                    if (mapped.Indirections > 0)
+                    var mapped = context.MapType(method.ReturnTypeFullName);
+                    var iface = mapped as InterfaceType;
+                    if (iface != null && mapped is not PointerType && iface.IsIUnknownDerived)
                     {
-                        returnTypeName = "nint";
+                        context.CurrentWriter.WriteLine($"[return: MarshalUsing(typeof(UniqueComInterfaceMarshaller<{iface.Name}>))]");
+                    }
+
+                    if (mapped is PointerType || (iface != null && !iface.IsIUnknownDerived))
+                    {
+                        returnTypeName = IntPtrTypeName;
                     }
                     else
                     {
@@ -753,13 +848,14 @@ namespace Win32InteropBuilder.Generators
                 }
                 else
                 {
-                    if (method.ReturnType?.Indirections > 0)
+                    var rt = context.AllTypes[method.ReturnTypeFullName!];
+                    if (rt is PointerType)
                     {
-                        returnTypeName = "nint";
+                        returnTypeName = IntPtrTypeName;
                     }
                     else
                     {
-                        returnTypeName = "void";
+                        returnTypeName = VoidTypeName;
                     }
                 }
             }
@@ -772,8 +868,9 @@ namespace Win32InteropBuilder.Generators
 
             methodName ??= GetIdentifier(method.Name);
             string? comments = null;
-            foreach (var iface in type.AllInterfaces)
+            foreach (var ifaceTypeName in type.GetAllInterfaces(context))
             {
+                var iface = context.AllTypes[ifaceTypeName];
                 var existing = iface.Methods.FirstOrDefault(m => HaveSameSignature(context, type, m, method));
                 if (existing != null)
                 {
@@ -783,26 +880,56 @@ namespace Win32InteropBuilder.Generators
             }
 
             string? publicText = null;
-            if (type is not InterfaceType)
+            if (type is not InterfaceType || options.HasFlag(CSharpGeneratorMethodOptions.Public))
             {
                 publicText = "public ";
+            }
+
+            string? unsafeCode = null;
+            if (options.HasFlag(CSharpGeneratorMethodOptions.Unsafe))
+            {
+                unsafeCode = "unsafe ";
+            }
+
+            string? newCode = null;
+            if (options.HasFlag(CSharpGeneratorMethodOptions.ForImplementation) &&
+                (method.Name == nameof(GetType) || method.Name == nameof(ToString) || method.Name == nameof(Equals) || method.Name == nameof(GetHashCode)))
+            {
+                newCode = "new ";
             }
 
             returnTypeName = GetTypeReferenceName(returnTypeName);
             method.SetExtendedValue(nameof(returnTypeName), returnTypeName);
             method.SetExtendedValue(nameof(methodName), methodName);
 
-            context.CurrentWriter.Write($"{publicText}{staticText}{returnTypeName} {methodName}(");
+            var methodReturn = new CSharpGeneratorMethod(returnTypeName);
+            context.CurrentWriter.Write($"{publicText}{unsafeCode}{newCode}{staticText}{returnTypeName} {methodName}(");
             for (var j = 0; j < method.Parameters.Count; j++)
             {
                 var parameter = method.Parameters[j];
-                GenerateCode(context, type, method, methodPatch, parameter, j);
+
+                var parameterOptions = CSharpGeneratorParameterOptions.None;
+                if (options.HasFlag(CSharpGeneratorMethodOptions.OutAsRef))
+                {
+                    parameterOptions |= CSharpGeneratorParameterOptions.OutAsRef;
+                }
+
+                if (options.HasFlag(CSharpGeneratorMethodOptions.ComOutPtrAsIntPtr))
+                {
+                    parameterOptions |= CSharpGeneratorParameterOptions.ComOutPtrAsIntPtr;
+                }
+
+                var parameterCode = GenerateCode(context, type, method, methodPatch, parameter, j, parameterOptions);
+                methodReturn.Parameters.Add(parameterCode);
                 if (j != method.Parameters.Count - 1)
                 {
                     context.CurrentWriter.Write(", ");
                 }
             }
-            context.CurrentWriter.WriteLine($");{comments}");
+
+            var decl = options.HasFlag(CSharpGeneratorMethodOptions.ForImplementation) ? null : ";";
+            context.CurrentWriter.WriteLine($"){decl}{comments}");
+            return methodReturn;
         }
 
         protected virtual bool HaveSameSignature(BuilderContext context, BuilderType type, BuilderMethod method1, BuilderMethod method2)
@@ -823,60 +950,85 @@ namespace Win32InteropBuilder.Generators
             for (var i = 0; i < method1.Parameters.Count; i++)
             {
                 // hopefully context are similar
-                var def1 = GetParameterDef(context, type, method1, method1.Parameters[i]);
-                var def2 = GetParameterDef(context, type, method2, method2.Parameters[i]);
+                var def1 = GetParameterDef(context, type, method1, method1.Parameters[i], CSharpGeneratorParameterOptions.None);
+                var def2 = GetParameterDef(context, type, method2, method2.Parameters[i], CSharpGeneratorParameterOptions.None);
                 if (def1.TypeName != def2.TypeName || def1.Direction != def2.Direction)
                     return false;
             }
             return true;
         }
 
-        protected virtual ParameterDef GetParameterDef(BuilderContext context, BuilderType type, BuilderMethod method, BuilderParameter parameter)
+        public virtual bool IsUnknownComOutPtr(BuilderParameter parameter)
+        {
+            ArgumentNullException.ThrowIfNull(parameter);
+            if (parameter.TypeFullName == null)
+                throw new InvalidOperationException();
+
+            var np = parameter.TypeFullName.NoPointerFullName;
+            return parameter.IsComOutPtr && (np == WellKnownTypes.SystemVoid.FullName || np == WellKnownTypes.SystemObject.FullName);
+        }
+
+        protected virtual ParameterDef GetUnknownComOutPtr(BuilderContext context, BuilderParameter parameter, ParameterDef def, CSharpGeneratorParameterOptions options)
+        {
+            ArgumentNullException.ThrowIfNull(context);
+            ArgumentNullException.ThrowIfNull(parameter);
+            ArgumentNullException.ThrowIfNull(def);
+            if (!IsUnknownComOutPtr(parameter))
+                throw new ArgumentException(null, nameof(parameter));
+
+            var copTarget = context.Configuration.Generation.UnknownComOutPtrTarget;
+            if (options.HasFlag(CSharpGeneratorParameterOptions.ComOutPtrAsIntPtr))
+            {
+                copTarget = ComOutPtrTarget.IntPtr;
+            }
+
+            switch (copTarget)
+            {
+                case ComOutPtrTarget.Object:
+                    return context.GetParameterDef(parameter, new ParameterDef
+                    {
+                        Direction = ParameterDirection.Out,
+                        TypeName = "object",
+                        MarshalAs = new ParameterMarshalAs { UnmanagedType = UnmanagedType.Interface },
+                        Comments = $" /* {def.TypeName} */"
+                    });
+
+                case ComOutPtrTarget.UniqueObject:
+                    return context.GetParameterDef(parameter, new ParameterDef
+                    {
+                        Direction = ParameterDirection.Out,
+                        TypeName = "object",
+                        MarshalUsing = new ParameterMarshalUsing { TypeName = "UniqueComInterfaceMarshaller<object>" },
+                        Comments = $" /* {def.TypeName} */"
+                    });
+
+                // case ComOutPtrTarget.IntPtr
+                default:
+                    return context.GetParameterDef(parameter, new ParameterDef
+                    {
+                        Direction = ParameterDirection.Out,
+                        TypeName = IntPtrTypeName,
+                        Comments = $" /* {def.TypeName} */"
+                    });
+            }
+        }
+
+        protected virtual ParameterDef GetParameterDef(BuilderContext context, BuilderType type, BuilderMethod method, BuilderParameter parameter, CSharpGeneratorParameterOptions options)
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(parameter);
             ArgumentNullException.ThrowIfNull(method);
             ArgumentNullException.ThrowIfNull(type);
-            if (parameter.Type == null)
+            if (parameter.TypeFullName == null)
                 throw new InvalidOperationException();
 
+            var parameterType = context.AllTypes[parameter.TypeFullName];
+            var pt = parameterType as PointerType;
             var def = new ParameterDef();
-            var mapped = context.MapType(parameter.Type);
+            var mapped = context.MapType(parameter.TypeFullName);
             def.TypeName = GetTypeReferenceName(mapped.GetGeneratedName(context));
-            var isUnknownComOutPtr = parameter.IsComOutPtr && (parameter.Type == WellKnownTypes.SystemVoid || parameter.Type == WellKnownTypes.SystemObject);
-            if (isUnknownComOutPtr)
-            {
-                var copTarget = context.Configuration.Generation.UnknownComOutPtrTarget;
-                switch (copTarget)
-                {
-                    case ComOutPtrTarget.Object:
-                        return context.GetParameterDef(parameter, new ParameterDef
-                        {
-                            Direction = ParameterDirection.Out,
-                            TypeName = "object",
-                            MarshalAs = new ParameterMarshalAs { UnmanagedType = UnmanagedType.Interface },
-                            Comments = $" /* {def.TypeName} */"
-                        });
-
-                    case ComOutPtrTarget.UniqueObject:
-                        return context.GetParameterDef(parameter, new ParameterDef
-                        {
-                            Direction = ParameterDirection.Out,
-                            TypeName = "object",
-                            MarshalUsing = new ParameterMarshalUsing { TypeName = "UniqueComInterfaceMarshaller<object>" },
-                            Comments = $" /* {def.TypeName} */"
-                        });
-
-                    // case ComOutPtrTarget.IntPtr
-                    default:
-                        return context.GetParameterDef(parameter, new ParameterDef
-                        {
-                            Direction = ParameterDirection.Out,
-                            TypeName = "nint",
-                            Comments = $" /* {def.TypeName} */"
-                        });
-                }
-            }
+            if (IsUnknownComOutPtr(parameter))
+                return GetUnknownComOutPtr(context, parameter, def, options);
 
             if (parameter.Attributes.HasFlag(ParameterAttributes.Out))
             {
@@ -900,28 +1052,32 @@ namespace Win32InteropBuilder.Generators
             }
 
             if (!def.Direction.HasValue &&
-                mapped.Indirections > 0 &&
+                mapped is PointerType &&
                 def.TypeName != IntPtrTypeName &&
                 def.TypeName != UIntPtrTypeName)
             {
                 def.Direction = ParameterDirection.In;
             }
 
-            var optionalPtr = parameter.Attributes.HasFlag(ParameterAttributes.Optional) & parameter.Type.Indirections > 0;
-            if (optionalPtr)
+            if (parameterType is InterfaceType ifaceType && !ifaceType.IsIUnknownDerived)
             {
-                def.Comments = $" /* optional {def.TypeName}{new string('*', parameter.Type.Indirections)} */";
+                var rt = context.AllTypes[parameter.TypeFullName];
+            }
+
+            if (parameter.Attributes.HasFlag(ParameterAttributes.Optional) && pt != null)
+            {
+                def.Comments = $" /* optional {def.TypeName}{new string('*', pt.Indirections)} */";
                 def.TypeName = IntPtrTypeName;
                 def.MarshalAs = null;
                 def.Direction = null;
                 return context.GetParameterDef(parameter, def);
             }
 
-            if (def.TypeName == "void" && mapped.Indirections > 0)
+            if (def.TypeName == VoidTypeName && mapped is PointerType)
             {
                 def.TypeName = IntPtrTypeName;
                 def.MarshalAs = null;
-                if (mapped.Indirections == 1)
+                if (mapped is PointerType pt1 && pt1.Indirections == 1)
                 {
                     def.Direction = null;
                 }
@@ -932,12 +1088,12 @@ namespace Win32InteropBuilder.Generators
                 return context.GetParameterDef(parameter, def);
             }
 
-            if (def.TypeName == "byte" && parameter.Type.Indirections > 0)
+            if (def.TypeName == "byte" && pt != null)
             {
                 def.TypeName = IntPtrTypeName;
                 def.Comments = " /* byte array */";
                 def.MarshalAs = null;
-                if (parameter.Type.Indirections == 1)
+                if (pt.Indirections == 1)
                 {
                     def.Direction = null;
                 }
@@ -951,7 +1107,7 @@ namespace Win32InteropBuilder.Generators
             // there are currently big limits to delegate marshaling
             if (type is DelegateType)
             {
-                if (def.Direction.HasValue || parameter.Type is InterfaceType || parameter.Type is DelegateType)
+                if (def.Direction.HasValue || parameterType is InterfaceType || parameterType is DelegateType)
                 {
                     if (def.Direction.HasValue)
                     {
@@ -979,7 +1135,7 @@ namespace Win32InteropBuilder.Generators
                     def.MarshalAs = null;
                 }
 
-                var implicitArray = IsArrayType(mapped) && parameter.Type.Indirections == 0;
+                var implicitArray = IsArrayType(mapped) && pt == null;
                 if (!implicitArray)
                 {
                     def.TypeName += "[]";
@@ -994,7 +1150,7 @@ namespace Win32InteropBuilder.Generators
                         def.IsIn = true;
                     }
                     else if (!parameter.NativeArray.CountParameter.Attributes.HasFlag(ParameterAttributes.Out) &&
-                        (parameter.Type.Indirections > 0 || implicitArray))
+                        (pt != null || implicitArray))
                     {
                         def.Direction = null;
                         if (parameter.Attributes.HasFlag(ParameterAttributes.Out))
@@ -1012,10 +1168,7 @@ namespace Win32InteropBuilder.Generators
                         def.IsOut = true;
                         def.IsIn = true;
                     }
-                    else if (
-                        //parameter.Type is not InterfaceType &&
-                        (parameter.Type.Indirections > 0 || implicitArray)
-                        && parameter.Attributes.HasFlag(ParameterAttributes.Out))
+                    else if ((pt != null || implicitArray) && parameter.Attributes.HasFlag(ParameterAttributes.Out))
                     {
                         def.Direction = null;
                         def.IsOut = true;
@@ -1052,7 +1205,7 @@ namespace Win32InteropBuilder.Generators
                 return context.GetParameterDef(parameter, def);
             }
 
-            if (def.Direction == ParameterDirection.Out && parameter.Type.Indirections > 1)
+            if (def.Direction == ParameterDirection.Out && pt != null && pt.Indirections > 1)
             {
                 def.TypeName = IntPtrTypeName;
                 return context.GetParameterDef(parameter, def);
@@ -1065,20 +1218,27 @@ namespace Win32InteropBuilder.Generators
             if (def.Direction == ParameterDirection.Out && parameter.BytesParamIndex.HasValue)
             {
                 def.Direction = null;
-                if (mapped.Indirections > 0)
+                if (mapped is PointerType)
                 {
-                    def.TypeName = "nint";
+                    def.TypeName = IntPtrTypeName;
                 }
             }
 
             // don't set ? on value type as this creates a Nullable<struct> which is managed/non-blittable
-            if (isOptional && def.TypeName != IntPtrTypeName && !parameter.Type.IsValueType)
+            if (isOptional && def.TypeName != IntPtrTypeName && !parameterType.IsValueType)
             {
                 def.TypeName += "?";
             }
 
-            if (parameter.Type is InterfaceType && def.Direction == ParameterDirection.Out)
+            if (pt != null && context.AllTypes[pt.FullName.NoPointerFullName] is InterfaceType && def.Direction == ParameterDirection.Out)
             {
+                if (options.HasFlag(CSharpGeneratorParameterOptions.ComOutPtrAsIntPtr))
+                    return context.GetParameterDef(parameter, new ParameterDef
+                    {
+                        TypeName = IntPtrTypeName,
+                        Direction = ParameterDirection.Out,
+                    });
+
                 var copTarget = context.Configuration.Generation.ComOutPtrTarget;
                 if (copTarget == ComOutPtrTarget.UniqueObject)
                     return context.GetParameterDef(parameter, new ParameterDef
@@ -1098,17 +1258,24 @@ namespace Win32InteropBuilder.Generators
             return type.FullName == FullName.PWSTR || type.FullName == FullName.PSTR || type.FullName == FullName.BSTR;
         }
 
-        protected virtual void GenerateCode(BuilderContext context, BuilderType type, BuilderMethod method, BuilderPatchMember? methodPatch, BuilderParameter parameter, int parameterIndex)
+        protected virtual CSharpGeneratorParameter GenerateCode(
+            BuilderContext context,
+            BuilderType type,
+            BuilderMethod method,
+            BuilderPatchMember? methodPatch,
+            BuilderParameter parameter,
+            int parameterIndex,
+            CSharpGeneratorParameterOptions options)
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(context.CurrentWriter);
             ArgumentNullException.ThrowIfNull(type);
             ArgumentNullException.ThrowIfNull(method);
             ArgumentNullException.ThrowIfNull(parameter);
-            if (parameter.Type == null)
+            if (parameter.TypeFullName == null)
                 throw new InvalidOperationException();
 
-            var def = GetParameterDef(context, type, method, parameter);
+            var def = GetParameterDef(context, type, method, parameter, options);
 
             var defPatch = methodPatch?.Parameters?.FirstOrDefault(p => p.Matches(parameter, parameterIndex))?.Def;
             if (defPatch != null)
@@ -1150,97 +1317,28 @@ namespace Win32InteropBuilder.Generators
                 marshalUsing = $"[MarshalUsing({string.Join(", ", dic.Select(kv => (kv.Key.Length > 0) ? (kv.Key + " = " + kv.Value) : kv.Value))})] ";
             }
 
+            if (def.TypeName == IntPtrTypeName)
+            {
+                marshalUsing = null;
+            }
+
             string? direction = null;
             if (def.Direction != null)
             {
-                direction = def.Direction.Value.ToString().ToLowerInvariant() + " ";
-            }
-
-            context.CurrentWriter.Write($"{inAtt}{outAtt}{marshalAs}{marshalUsing}{direction}{def.TypeName}{def.Comments} {GetIdentifier(parameter.Name)}");
-        }
-
-        public virtual void GenerateExtension(BuilderContext context, BuilderTypeExtension extension)
-        {
-            ArgumentNullException.ThrowIfNull(context);
-            ArgumentNullException.ThrowIfNull(context.CurrentWriter);
-            ArgumentNullException.ThrowIfNull(context.Configuration);
-            ArgumentNullException.ThrowIfNull(context.Configuration.Generation);
-            ArgumentNullException.ThrowIfNull(extension);
-            if (extension.RootType is not InterfaceType)
-                return;
-
-            var ns = context.MapGeneratedFullName(extension.RootType.FullName).Namespace;
-            ns = GetIdentifier(ns);
-            context.CurrentWriter.WriteLine($"namespace {ns};");
-            context.CurrentWriter.WriteLine();
-            context.CurrentNamespace = ns;
-
-            if (extension.RootType is InterfaceType interfaceType)
-            {
-                GenerateExtension(context, extension, interfaceType);
-            }
-
-            context.CurrentNamespace = null;
-        }
-
-        protected virtual void GenerateExtension(BuilderContext context, BuilderTypeExtension extension, InterfaceType interfaceType)
-        {
-            ArgumentNullException.ThrowIfNull(context);
-            ArgumentNullException.ThrowIfNull(context.CurrentWriter);
-            ArgumentNullException.ThrowIfNull(context.Configuration);
-            ArgumentNullException.ThrowIfNull(context.Configuration.Generation);
-            ArgumentNullException.ThrowIfNull(extension);
-            ArgumentNullException.ThrowIfNull(interfaceType);
-
-            //if (type.SupportedOSPlatform != null)
-            //{
-            //    context.CurrentWriter.WriteLine($"[SupportedOSPlatform(\"{type.SupportedOSPlatform}\")]");
-            //}
-
-            context.CurrentWriter.Write($"public static partial class {GetIdentifier(extension.GetGeneratedName(context))}");
-            context.CurrentWriter.WriteLine();
-            context.CurrentWriter.WithParens(() =>
-            {
-                for (var i = 0; i < extension.Methods.Count; i++)
+                if (options.HasFlag(CSharpGeneratorParameterOptions.OutAsRef) && def.Direction == ParameterDirection.Out)
                 {
-                    var method = extension.Methods[i];
-                    GenerateExtension(context, extension, method);
-                    if (i != extension.Methods.Count - 1)
-                    {
-                        context.CurrentWriter.WriteLine();
-                    }
+                    direction = "ref ";
                 }
-            });
-        }
-
-        protected virtual void GenerateExtension(BuilderContext context, BuilderTypeExtension extension, BuilderTypeExtensionMethod method)
-        {
-            ArgumentNullException.ThrowIfNull(context);
-            ArgumentNullException.ThrowIfNull(context.CurrentWriter);
-            ArgumentNullException.ThrowIfNull(context.Configuration);
-            ArgumentNullException.ThrowIfNull(context.Configuration.Generation);
-            ArgumentNullException.ThrowIfNull(extension);
-            ArgumentNullException.ThrowIfNull(method);
-
-            string returnTypeName;
-            returnTypeName = method.GetExtendedValue<string>(nameof(returnTypeName))!;
-
-            string methodName;
-            methodName = method.GetExtendedValue<string>(nameof(methodName))!;
-            context.CurrentWriter.Write($"public static {returnTypeName} {methodName}(");
-            for (var j = 0; j < method.Parameters.Count; j++)
-            {
-                var parameter = method.Parameters[j];
-                //GenerateCode(context, type, method, methodPatch, parameter, j);
-                if (j != method.Parameters.Count - 1)
+                else
                 {
-                    context.CurrentWriter.Write(", ");
+                    direction = def.Direction.Value.ToString().ToLowerInvariant() + " ";
                 }
             }
-            context.CurrentWriter.WriteLine($")");
-            context.CurrentWriter.WithParens(() =>
-            {
-            });
+
+            var identifier = GetIdentifier(parameter.Name);
+            var parameterReturn = new CSharpGeneratorParameter(identifier, def.TypeName!, def.Direction);
+            context.CurrentWriter.Write($"{inAtt}{outAtt}{marshalAs}{marshalUsing}{direction}{def.TypeName}{def.Comments} {identifier}");
+            return parameterReturn;
         }
 
         // https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/classes#154-constants

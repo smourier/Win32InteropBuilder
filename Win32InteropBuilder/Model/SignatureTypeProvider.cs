@@ -20,32 +20,41 @@ namespace Win32InteropBuilder.Model
             ArgumentNullException.ThrowIfNull(elementType);
             if (shape.Rank == 1 && shape.Sizes.Length == 1)
             {
-                Context.AddDependencies(elementType);
+                Context.AddDependencies(elementType.FullName);
                 var arrayType = Context.CreateInlineArrayType(elementType, shape.Sizes[0]);
                 if (arrayType == null)
                     throw new InvalidOperationException();
 
-                Context.TypesToBuild.Add(arrayType);
+                Context.AllTypes[arrayType.FullName] = arrayType;
+                Context.TypesToBuild.Add(arrayType.FullName);
 
                 // nested element type => nested inline array
                 if (elementType.FullName.NestedName != null)
                 {
                     arrayType.IsNested = true;
-                    Context.CurrentTypes.Peek().NestedTypes.Add(arrayType);
+                    Context.CurrentTypes.Peek().NestedTypes.Add(arrayType.FullName);
                 }
                 return arrayType;
             }
 
-            var type = elementType.Clone(Context);
-            type.ArrayShape = shape;
+            var type = Context.CreateArrayType(elementType.FullName, shape);
             return type;
         }
 
         public virtual BuilderType GetPointerType(BuilderType elementType)
         {
             ArgumentNullException.ThrowIfNull(elementType);
-            var type = elementType.Clone(Context);
-            type.Indirections = elementType.Indirections + 1;
+            PointerType type;
+            if (elementType is PointerType pt)
+            {
+                type = Context.CreatePointerType(pt.FullName, pt.Indirections + 1);
+            }
+            else
+            {
+                type = Context.CreatePointerType(elementType.FullName, 1);
+            }
+
+            Context.AllTypes[type.FullName] = type;
             return type;
         }
 
@@ -69,9 +78,9 @@ namespace Win32InteropBuilder.Model
             if (fn.Namespace == string.Empty && Context.CurrentTypes.Count > 0)
             {
                 var currentType = Context.CurrentTypes.Peek();
-                var nestedType = currentType.NestedTypes.FirstOrDefault(t => t.FullName.NestedName == fn.Name);
+                var nestedType = currentType.NestedTypes.FirstOrDefault(t => t.NestedName == fn.Name);
                 if (nestedType != null)
-                    return nestedType;
+                    return Context.AllTypes[nestedType];
             }
 
             Context.LogWarning("Can't resolve: " + fn.Name);

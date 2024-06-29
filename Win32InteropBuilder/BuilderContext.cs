@@ -31,11 +31,10 @@ namespace Win32InteropBuilder
         public virtual SignatureTypeProvider SignatureTypeProvider { get; }
         public virtual CustomAttributeTypeProvider CustomAttributeTypeProvider { get; }
         public virtual MetadataReader? MetadataReader { get; set; }
-        public virtual HashSet<BuilderType> TypesToBuild { get; } = [];
+        public virtual HashSet<FullName> TypesToBuild { get; } = [];
         public virtual IDictionary<FullName, BuilderType> AllTypes { get; } = new Dictionary<FullName, BuilderType>();
         public virtual IDictionary<FullName, TypeDefinition> TypeDefinitions { get; } = new Dictionary<FullName, TypeDefinition>();
         public virtual IDictionary<FullName, BuilderType> MappedTypes { get; } = new Dictionary<FullName, BuilderType>();
-        public virtual IDictionary<FullName, BuilderTypeExtension> Extensions { get; } = new Dictionary<FullName, BuilderTypeExtension>();
         public virtual ISet<string> ImplicitNamespaces { get; } = new HashSet<string>();
         public virtual ISet<BuilderType> TypesWithFunctions { get; } = new HashSet<BuilderType>();
         public virtual ISet<BuilderType> TypesWithConstants { get; } = new HashSet<BuilderType>();
@@ -51,12 +50,12 @@ namespace Win32InteropBuilder
         public virtual StructureType CreateStructureType(FullName fullName) => new(fullName);
         public virtual EnumType CreateEnumType(FullName fullName) => new(fullName);
         public virtual DelegateType CreateDelegateType(FullName fullName) => new(fullName);
+        public virtual PointerType CreatePointerType(FullName fullName, int indirections) => new(fullName, indirections);
+        public virtual ArrayType CreateArrayType(FullName fullName, ArrayShape shape) => new(fullName, shape);
         public virtual BuilderMethod CreateBuilderMethod(string name) => new(name);
         public virtual BuilderParameter CreateBuilderParameter(string name, int sequenceNumber) => new(name, sequenceNumber);
         public virtual BuilderField CreateBuilderField(string name) => new(name);
         public virtual BuilderType CreateInlineArrayType(BuilderType elementType, int size, FullName? fullName = null) => new InlineArrayType(elementType, size, fullName);
-        public virtual BuilderTypeExtension CreateTypeExtension(BuilderType rootType) => new(rootType);
-        public virtual BuilderTypeExtensionMethod CreateTypeExtensionMethod(BuilderMethod method) => new(method);
 
         public virtual FullName GetFullName(TypeDefinition typeDef)
         {
@@ -117,33 +116,39 @@ namespace Win32InteropBuilder
             return CreateBuilderType(fn);
         }
 
-        public virtual void AddDependencies(BuilderType type)
+        public virtual void AddDependencies(FullName typeFullName)
         {
-            ArgumentNullException.ThrowIfNull(type);
+            ArgumentNullException.ThrowIfNull(typeFullName);
+            typeFullName = typeFullName.NoPointerFullName;
             if (MetadataReader == null)
                 throw new InvalidOperationException();
 
-            if (!TypeDefinitions.TryGetValue(type.FullName, out var typeDef))
+            if (!TypeDefinitions.TryGetValue(typeFullName, out var typeDef))
                 return;
 
-            if (TypesToBuild.Contains(type))
+            if (TypesToBuild.Contains(typeFullName))
                 return;
 
-            type.ResolveType(this, typeDef);
+            AllTypes[typeFullName].ResolveType(this, typeDef);
         }
 
-        public virtual BuilderType MapType(BuilderType type)
+        public virtual BuilderType MapType(FullName typeFullName)
         {
-            ArgumentNullException.ThrowIfNull(type);
-            if (!MappedTypes.TryGetValue(type.FullName, out var mapped))
-                return type;
-
-            if (type.Indirections > 0)
+            ArgumentNullException.ThrowIfNull(typeFullName);
+            if (!MappedTypes.TryGetValue(typeFullName, out var mapped))
             {
-                var clone = mapped.Clone(this);
-                clone.Indirections = type.Indirections;
-                return clone;
+                var nofn = typeFullName.NoPointerFullName;
+                if (!MappedTypes.TryGetValue(nofn, out mapped))
+                    return AllTypes[typeFullName];
+
+                var pt = CreatePointerType(mapped.FullName, typeFullName.Indirections);
+                if (!AllTypes.TryGetValue(pt.FullName, out mapped))
+                {
+                    AllTypes[pt.FullName] = pt;
+                    mapped = pt;
+                }
             }
+
             return mapped;
         }
 
@@ -152,7 +157,6 @@ namespace Win32InteropBuilder
             ArgumentNullException.ThrowIfNull(fullName);
             ArgumentNullException.ThrowIfNull(Configuration);
             ArgumentNullException.ThrowIfNull(Configuration.Generation);
-
             var un = Configuration.GetUnifiedGeneration();
             if (un != null)
                 return new FullName(un.Namespace!, FullName.HRESULT.Name);
@@ -160,13 +164,13 @@ namespace Win32InteropBuilder
             return fullName;
         }
 
-        public virtual bool IsConstableType(BuilderType type)
+        public virtual bool IsConstableType(FullName typeFullName)
         {
-            ArgumentNullException.ThrowIfNull(type);
-            if (type is EnumType)
+            ArgumentNullException.ThrowIfNull(typeFullName);
+            if (AllTypes[typeFullName] is EnumType)
                 return true;
 
-            return Generator.ConstableTypes.Contains(type.FullName);
+            return Generator.ConstableTypes.Contains(typeFullName);
         }
 
         public virtual string GetValueAsString(BuilderType type, object? value, string defaultValueAsString)
@@ -217,8 +221,6 @@ namespace Win32InteropBuilder
             return true;
         }
 
-        public virtual bool HasExtensions(BuilderTypeExtension extension, BuilderType type, BuilderMethod method) => true;
-
         // last error is globally not well defined in Win32metadata
         // so the logic is to set it when it's not defined even if it's not always ok
         public virtual bool HasSetLastError(BuilderMethod method)
@@ -230,26 +232,29 @@ namespace Win32InteropBuilder
             if (method.ImportAttributes.HasFlag(MethodImportAttributes.SetLastError))
                 return true;
 
-            if (Configuration.Generation.SetLastErrorMode != BuilderConfiguration.SetLastErrorMode.Auto || method.ReturnType == null)
+            if (Configuration.Generation.SetLastErrorMode != BuilderConfiguration.SetLastErrorMode.Auto || method.ReturnTypeFullName == null)
                 return false;
 
             // void is rarely last error
-            if (method.ReturnType == WellKnownTypes.SystemVoid)
+            if (method.ReturnTypeFullName == WellKnownTypes.SystemVoid.FullName)
                 return false;
 
             // HRESULT is never last error
-            if (method.ReturnType.FullName == FullName.HRESULT)
+            if (method.ReturnTypeFullName == FullName.HRESULT)
                 return false;
 
             // bool is often last error
-            if (method.ReturnType == WellKnownTypes.SystemBoolean ||
-                method.ReturnType.FullName == FullName.BOOL)
+            if (method.ReturnTypeFullName == WellKnownTypes.SystemBoolean.FullName ||
+                method.ReturnTypeFullName == FullName.BOOL)
                 return true;
 
             // handle often set last errrors
-            if (method.ReturnType == WellKnownTypes.SystemIntPtr ||
-                method.ReturnType == WellKnownTypes.SystemUIntPtr ||
-                method.ReturnType.IsHandle)
+            if (method.ReturnTypeFullName == WellKnownTypes.SystemIntPtr.FullName ||
+                method.ReturnTypeFullName == WellKnownTypes.SystemUIntPtr.FullName)
+                return true;
+
+            var rt = AllTypes[method.ReturnTypeFullName];
+            if (rt.IsHandle)
                 return true;
 
             return false;

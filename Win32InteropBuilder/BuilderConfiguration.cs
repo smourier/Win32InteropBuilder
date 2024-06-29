@@ -13,13 +13,10 @@ namespace Win32InteropBuilder
         public virtual string? BuilderTypeName { get; set; }
         public virtual string? WinMdPath { get; set; }
         public virtual string? OutputDirectoryPath { get; set; }
-        public virtual string? ExtensionsOutputDirectoryPath { get; set; }
         public virtual string? PatchesFilePath { get; set; } = "Patches.json";
         public virtual BuilderPatches? Patches { get; set; }
         public virtual bool DeleteOutputDirectory { get; set; }
-        public virtual bool DeleteExtensionsOutputDirectory { get; set; }
         public virtual bool GenerateFiles { get; set; } = true;
-        public virtual bool GenerateExtensions { get; set; } = true;
         public virtual Encoding? OutputEncoding { get; set; }
         public virtual EncodingDetectorMode EncodingDetectorMode { get; set; }
         public virtual bool RemoveNonGeneratedFiles { get; set; } = true;
@@ -54,7 +51,6 @@ namespace Win32InteropBuilder
             public virtual ComOutPtrTarget ComOutPtrTarget { get; set; } = ComOutPtrTarget.UniqueObject;
             public virtual bool AddNullableEnable { get; set; } = true;
             public virtual UnifiedGeneration Unified { get; set; } = new();
-            public virtual IList<BuilderTypeInput> InterfaceExtensions { get; set; } = [];
             public virtual SetLastErrorMode SetLastErrorMode { get; set; }
 
             public class UnifiedGeneration

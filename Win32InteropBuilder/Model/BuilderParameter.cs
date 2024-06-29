@@ -20,7 +20,7 @@ namespace Win32InteropBuilder.Model
         public string Name { get; }
         public int SequenceNumber { get; }
         public virtual ParameterAttributes Attributes { get; set; }
-        public virtual BuilderType? Type { get; set; }
+        public virtual FullName? TypeFullName { get; set; }
         public virtual bool IsComOutPtr { get; set; }
         public virtual short? BytesParamIndex { get; set; }
         public virtual NativeArray? NativeArray { get; set; }
@@ -35,6 +35,6 @@ namespace Win32InteropBuilder.Model
             return SequenceNumber.CompareTo(other.SequenceNumber);
         }
 
-        public override string ToString() => $"{Type} {Name}";
+        public override string ToString() => $"{TypeFullName} {Name}";
     }
 }

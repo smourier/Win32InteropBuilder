@@ -15,11 +15,12 @@ namespace Win32InteropBuilder.Model
         public static FullName BuildFullName(BuilderType elementType, int size, string? elementName = null)
         {
             ArgumentNullException.ThrowIfNull(elementType);
-            var ns = elementType.FullName.NestedName;
+            var fullName = elementType.FullName.NoPointerFullName;
+            var ns = fullName.NestedName;
             if (ns != null)
                 return new(GeneratedInteropNamespace + ".InlineArray" + ns + "_" + size);
 
-            return new(GeneratedInteropNamespace + ".InlineArray" + (elementName ?? elementType.Name) + "_" + size);
+            return new(GeneratedInteropNamespace + ".InlineArray" + (elementName ?? fullName.Name) + "_" + size);
         }
 
         public virtual BuilderType ElementType { get; protected set; }

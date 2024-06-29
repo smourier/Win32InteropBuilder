@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
+using System.Text;
 using Win32InteropBuilder.Utilities;
 
 namespace Win32InteropBuilder.Model
@@ -69,6 +70,55 @@ namespace Win32InteropBuilder.Model
                 default:
                     throw new NotSupportedException();
             }
+        }
+
+        public static bool IsIUnknownDerived(this BuilderContext context, TypeDefinition type)
+        {
+            ArgumentNullException.ThrowIfNull(context);
+            ArgumentNullException.ThrowIfNull(context.MetadataReader);
+            var interfaces = type.GetInterfaceImplementations();
+            foreach (var iface in interfaces)
+            {
+                var fn = context.MetadataReader.GetFullName(iface);
+                if (fn == FullName.IUnknown || fn == FullName.IDispatch)
+                    return true;
+
+                var typeDef = context.TypeDefinitions[fn];
+                if (IsIUnknownDerived(context, typeDef))
+                    return true;
+            }
+            return false;
+        }
+
+        public static string? RemoveWhitespaces(this string? str)
+        {
+            if (string.IsNullOrWhiteSpace(str))
+                return null;
+
+            var sb = new StringBuilder(str.Length);
+            for (var i = 0; i < str.Length; i++)
+            {
+                var c = str[i];
+                if (char.IsWhiteSpace(c))
+                    continue;
+
+                sb.Append(c);
+            }
+            if (sb.Length == str.Length)
+                return str;
+
+            return sb.ToString();
+        }
+
+        public static bool EqualsWithoutWhitespaces(this string? left, string? right)
+        {
+            if (left == null)
+                return string.IsNullOrWhiteSpace(right);
+
+            if (right == null)
+                return string.IsNullOrWhiteSpace(left);
+
+            return RemoveWhitespaces(left) == RemoveWhitespaces(right);
         }
 
         public static MemberReference GetMemberReference(this MetadataReader reader, CustomAttribute attribute)

@@ -54,7 +54,6 @@ namespace Win32InteropBuilder
             configuration.BuilderTypeName ??= typeof(Builder).AssemblyQualifiedName!;
             configuration.WinMdPath ??= winMdPath;
             configuration.OutputDirectoryPath ??= Path.Combine(Path.GetDirectoryName(configurationPath).Nullify() ?? Path.GetFullPath("."), Path.GetFileNameWithoutExtension(configurationPath));
-            configuration.ExtensionsOutputDirectoryPath ??= Path.Combine(configuration.OutputDirectoryPath, BuilderTypeExtension.DefaultPostfix);
 
             var builderType = Type.GetType(configuration.BuilderTypeName, true)!;
             var builder = (Builder)Activator.CreateInstance(builderType)!;
@@ -123,10 +122,6 @@ namespace Win32InteropBuilder
             if (context.Configuration.GenerateFiles)
             {
                 GenerateTypes(context);
-                if (context.Configuration.GenerateExtensions)
-                {
-                    GenerateExtensions(context);
-                }
             }
         }
 
@@ -261,7 +256,7 @@ namespace Win32InteropBuilder
 
             foreach (var type in includes)
             {
-                context.AddDependencies(type);
+                context.AddDependencies(type.FullName);
             }
 
             ExcludeTypesFromBuild(context);
@@ -284,7 +279,7 @@ namespace Win32InteropBuilder
             ArgumentNullException.ThrowIfNull(context.Configuration);
             ArgumentNullException.ThrowIfNull(context.Configuration.Generation);
 
-            context.TypesToBuild.Remove(new BuilderType(FullName.IUnknown));
+            context.TypesToBuild.Remove(FullName.IUnknown);
         }
 
         // unsed today
@@ -292,7 +287,7 @@ namespace Win32InteropBuilder
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(context.MetadataReader);
-            foreach (var type in context.TypesToBuild.ToArray().Where(t => t.IsHandle))
+            foreach (var type in context.TypesToBuild.ToArray().Where(t => context.AllTypes[t].IsHandle))
             {
                 context.TypesToBuild.Remove(type);
             }
@@ -310,9 +305,9 @@ namespace Win32InteropBuilder
         protected virtual void AddMappedTypes(BuilderContext context)
         {
             ArgumentNullException.ThrowIfNull(context);
-            //context.MappedTypes[FullName.BOOL] = WellKnownTypes.SystemBoolean;
             context.MappedTypes[FullName.DECIMAL] = WellKnownTypes.SystemDecimal;
             context.MappedTypes[FullName.IUnknown] = WellKnownTypes.SystemIntPtr;
+            context.MappedTypes[FullName.IUnknownPtr] = WellKnownTypes.SystemIntPtr;
             context.MappedTypes[FullName.FARPROC] = WellKnownTypes.SystemIntPtr;
         }
 
@@ -342,10 +337,10 @@ namespace Win32InteropBuilder
             if (un != null)
             {
                 var duplicateFiles = new Dictionary<string, List<BuilderType>>(StringComparer.OrdinalIgnoreCase);
-                foreach (var type in context.TypesToBuild.OrderBy(t => t.FullName))
+                foreach (var typeFullName in context.TypesToBuild.OrderBy(t => t))
                 {
-                    var finalType = type;
-                    if (context.MappedTypes.TryGetValue(type.FullName, out var mappedType))
+                    var finalType = context.AllTypes[typeFullName];
+                    if (context.MappedTypes.TryGetValue(typeFullName, out var mappedType))
                     {
                         finalType = mappedType;
                     }
@@ -398,7 +393,7 @@ namespace Win32InteropBuilder
                     }
                     else
                     {
-                        context.TypesToBuild.Remove(type);
+                        context.TypesToBuild.Remove(typeFullName);
                     }
                 }
 
@@ -483,14 +478,14 @@ namespace Win32InteropBuilder
                 }
             }
 
-            foreach (var type in context.TypesToBuild.OrderBy(t => t.FullName))
+            foreach (var typeFullName in context.TypesToBuild.OrderBy(t => t))
             {
-                var finalType = type;
-                if (context.MappedTypes.TryGetValue(type.FullName, out var mappedType))
+                var finalType = context.AllTypes[typeFullName];
+                if (context.MappedTypes.TryGetValue(typeFullName, out var mappedType))
                 {
                     finalType = mappedType;
                 }
-                if (!finalType.IsGenerated)
+                if (!finalType.IsGenerated || finalType.IsNested)
                     continue;
 
                 var typePath = finalType.Generate(context);
@@ -526,8 +521,8 @@ namespace Win32InteropBuilder
                                     continue;
 
                                 field.DefaultValue = kv.Value;
-                                field.Type = context.GetTypeFromValue(kv.Value);
-                                if (field.Type == null)
+                                field.TypeFullName = context.GetTypeFromValue(kv.Value)?.FullName;
+                                if (field.TypeFullName == null)
                                     throw new InvalidOperationException();
 
                                 constantsType.Fields.Add(field);
@@ -571,46 +566,6 @@ namespace Win32InteropBuilder
                     IOUtilities.FileDelete(filePath);
                 }
                 IOUtilities.DirectoryDeleteEmptySubDirectories(context.Configuration.OutputDirectoryPath);
-            }
-        }
-
-        protected virtual void GenerateExtensions(BuilderContext context)
-        {
-            ArgumentNullException.ThrowIfNull(context);
-            ArgumentNullException.ThrowIfNull(context.Configuration);
-            ArgumentNullException.ThrowIfNull(context.Configuration.Generation);
-            ArgumentNullException.ThrowIfNull(context.Configuration.ExtensionsOutputDirectoryPath);
-
-            if (context.Configuration.DeleteExtensionsOutputDirectory)
-            {
-                IOUtilities.DirectoryDelete(context.Configuration.ExtensionsOutputDirectoryPath, true);
-            }
-
-            var existingFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            if (context.Configuration.RemoveNonGeneratedFiles && IOUtilities.PathIsDirectory(context.Configuration.ExtensionsOutputDirectoryPath))
-            {
-                existingFiles.AddRange(Directory.EnumerateFileSystemEntries(context.Configuration.ExtensionsOutputDirectoryPath, "*.cs", SearchOption.AllDirectories));
-            }
-
-            foreach (var kv in context.Extensions.OrderBy(e => e.Key))
-            {
-                if (!kv.Value.IsGenerated)
-                    continue;
-
-                var typePath = kv.Value.Generate(context);
-                if (typePath != null)
-                {
-                    existingFiles.Remove(typePath);
-                }
-            }
-
-            if (context.Configuration.RemoveNonGeneratedFiles)
-            {
-                foreach (var filePath in existingFiles)
-                {
-                    IOUtilities.FileDelete(filePath);
-                }
-                IOUtilities.DirectoryDeleteEmptySubDirectories(context.Configuration.ExtensionsOutputDirectoryPath);
             }
         }
     }

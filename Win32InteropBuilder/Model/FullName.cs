@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
 using Win32InteropBuilder.Utilities;
@@ -17,6 +19,7 @@ namespace Win32InteropBuilder.Model
         public static FullName SystemValueType { get; } = new(typeof(ValueType));
         public static FullName SystemEnum { get; } = new(typeof(Enum));
         public static FullName IUnknown { get; } = new(ComNamespace + ".IUnknown");
+        public static FullName IUnknownPtr { get; } = new(ComNamespace + ".IUnknown*");
         public static FullName IDispatch { get; } = new(ComNamespace + ".IDispatch");
         public static FullName HRESULT { get; } = new(FoundationNamespace + ".HRESULT");
         public static FullName LRESULT { get; } = new(FoundationNamespace + ".LRESULT");
@@ -49,6 +52,7 @@ namespace Win32InteropBuilder.Model
             ArgumentNullException.ThrowIfNull(name);
             Namespace = @namespace;
             Name = name;
+            SetNoPointerFullName();
         }
 
         public FullName(string fullName)
@@ -65,6 +69,7 @@ namespace Win32InteropBuilder.Model
                 Name = fullName[(pos + 1)..];
                 Namespace = fullName[..pos];
             }
+            SetNoPointerFullName();
         }
 
         public FullName(Type type)
@@ -78,9 +83,12 @@ namespace Win32InteropBuilder.Model
 
             Namespace = type.Namespace;
             Name = type.Name;
+            SetNoPointerFullName();
         }
 
         FullName IFullyNameable.FullName => this;
+        public FullName NoPointerFullName { get; private set; }
+        public int Indirections { get; private set; }
         public string Namespace { get; }
         public string Name { get; }
         public string? NestedName
@@ -92,6 +100,20 @@ namespace Win32InteropBuilder.Model
                     return null;
 
                 return Name[(pos + 1)..];
+            }
+        }
+
+        [MemberNotNull(nameof(NoPointerFullName))]
+        private void SetNoPointerFullName()
+        {
+            if (Name.EndsWith('*'))
+            {
+                Indirections = Name.Count(c => c == '*');
+                NoPointerFullName = new FullName(Namespace, Name.Replace("*", string.Empty));
+            }
+            else
+            {
+                NoPointerFullName = this;
             }
         }
 

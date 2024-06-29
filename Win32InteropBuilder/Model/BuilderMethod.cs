@@ -14,7 +14,7 @@ namespace Win32InteropBuilder.Model
         public virtual MethodImplAttributes ImplAttributes { get; set; }
         public virtual bool IsAnsi { get; set; }
         public virtual bool IsUnicode { get; set; }
-        public virtual BuilderType? ReturnType { get; set; }
+        public virtual FullName? ReturnTypeFullName { get; set; }
         public virtual IList<BuilderParameter> Parameters => _parameters;
         public virtual MethodImportAttributes ImportAttributes { get; set; }
         public virtual string? ImportEntryPoint { get; set; }
