@@ -302,9 +302,6 @@ namespace Win32InteropBuilder.Generators
                         context.CurrentWriter.WriteLine($"[MarshalAs(UnmanagedType.{mapped.UnmanagedType.Value})]");
                     }
 
-                    if (field.Name == "IDI_APPLICATION")
-                    {
-                    }
                     var constText = field.Attributes.HasFlag(FieldAttributes.Literal) && context.IsConstableType(field.TypeFullName) ? "const" : "static readonly";
                     var vas = GetValueAsString(context, context.AllTypes[field.TypeFullName], field.GetDefaultValue(context));
                     context.CurrentWriter.WriteLine($"public {constText} {GetTypeReferenceName(mapped.GetGeneratedName(context))} {GetIdentifier(field.Name)} = {vas};");
@@ -598,26 +595,22 @@ namespace Win32InteropBuilder.Generators
                     CSharpGeneratorMethodOptions.Public |
                     CSharpGeneratorMethodOptions.OutAsRef | // because it's more simple otherwise we'd have to copy structs variables
                     CSharpGeneratorMethodOptions.ComOutPtrAsIntPtr | // because it's more simple
+                    CSharpGeneratorMethodOptions.NoLineReturn |
                     CSharpGeneratorMethodOptions.Unsafe);
-                context.CurrentWriter.WithParens(() =>
+
+                context.CurrentWriter.WriteLine(" =>");
+                context.CurrentWriter.Indent++;
+                string? argumentsTypes = null;
+                string? arguments = null;
+                if (methodReturn.Parameters.Count > 0)
                 {
-                    string? argumentsTypes = null;
-                    string? arguments = null;
-                    if (methodReturn.Parameters.Count > 0)
-                    {
-                        argumentsTypes = "," + string.Join(",", methodReturn.Parameters.Select(p => p.ToArgumentDeclaration()));
-                        arguments = ", " + string.Join(", ", methodReturn.Parameters.Select(p => p.ToArgument()));
-                    }
+                    argumentsTypes = "," + string.Join(",", methodReturn.Parameters.Select(p => p.ToArgumentDeclaration()));
+                    arguments = ", " + string.Join(", ", methodReturn.Parameters.Select(p => p.ToArgument()));
+                }
 
-                    string? ret = null;
-                    if (methodReturn.ReturnTypeName != VoidTypeName)
-                    {
-                        ret = "return ";
-                    }
-
-                    var slot = startSlot + i;
-                    context.CurrentWriter.WriteLine($"{ret}((delegate* unmanaged[MemberFunction]<{identifier}*{argumentsTypes}, {methodReturn.ReturnTypeName}>)(((void**){VTablePtr})[{slot}]))(({identifier}*){VTablePtr}{arguments});");
-                });
+                var slot = startSlot + i;
+                context.CurrentWriter.WriteLine($"((delegate* unmanaged<{identifier}*{argumentsTypes}, {methodReturn.ReturnTypeName}>)(((void**)*((void**){VTablePtr}))[{slot}]))(({identifier}*){VTablePtr}{arguments});");
+                context.CurrentWriter.Indent--;
 
                 if (i != type.Methods.Count - 1)
                 {
@@ -898,12 +891,18 @@ namespace Win32InteropBuilder.Generators
                 newCode = "new ";
             }
 
+            string? readOnly = null;
+            if (options.HasFlag(CSharpGeneratorMethodOptions.ReadOnly))
+            {
+                readOnly = "readonly ";
+            }
+
             returnTypeName = GetTypeReferenceName(returnTypeName);
             method.SetExtendedValue(nameof(returnTypeName), returnTypeName);
             method.SetExtendedValue(nameof(methodName), methodName);
 
             var methodReturn = new CSharpGeneratorMethod(returnTypeName);
-            context.CurrentWriter.Write($"{publicText}{unsafeCode}{newCode}{staticText}{returnTypeName} {methodName}(");
+            context.CurrentWriter.Write($"{publicText}{readOnly}{unsafeCode}{newCode}{staticText}{returnTypeName} {methodName}(");
             for (var j = 0; j < method.Parameters.Count; j++)
             {
                 var parameter = method.Parameters[j];
@@ -928,7 +927,11 @@ namespace Win32InteropBuilder.Generators
             }
 
             var decl = options.HasFlag(CSharpGeneratorMethodOptions.ForImplementation) ? null : ";";
-            context.CurrentWriter.WriteLine($"){decl}{comments}");
+            context.CurrentWriter.Write($"){decl}{comments}");
+            if (!options.HasFlag(CSharpGeneratorMethodOptions.NoLineReturn))
+            {
+                context.CurrentWriter.WriteLine();
+            }
             return methodReturn;
         }
 

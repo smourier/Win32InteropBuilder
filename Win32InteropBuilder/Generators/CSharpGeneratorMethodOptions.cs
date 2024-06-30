@@ -8,5 +8,7 @@
         Public = 0x4,
         OutAsRef = 0x8,
         ComOutPtrAsIntPtr = 0x10,
+        NoLineReturn = 0x20,
+        ReadOnly = 0x20,
     }
 }
