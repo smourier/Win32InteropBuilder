@@ -375,7 +375,11 @@ namespace Win32InteropBuilder.Generators
                 {
                     pack = $", Pack = {type.PackingSize.Value}";
                 }
-                context.CurrentWriter.WriteLine($"[StructLayout(LayoutKind.{lk}{pack})]");
+
+                if (pack != null || lk != LayoutKind.Sequential)
+                {
+                    context.CurrentWriter.WriteLine($"[StructLayout(LayoutKind.{lk}{pack})]");
+                }
             }
 
             var generateEquatable = type.Fields.Count == 1 && (
@@ -637,6 +641,9 @@ namespace Win32InteropBuilder.Generators
                 context.CurrentWriter.WriteLine($"public partial struct {identifier}");
                 context.CurrentWriter.WithParens(() =>
                 {
+                    context.CurrentWriter.WriteLine($"public static readonly {identifier} Null = new();");
+                    context.CurrentWriter.WriteLine();
+
                     context.CurrentWriter.WriteLine($"public nint {VTablePtr};");
                     context.CurrentWriter.WriteLine();
                     if (type.Interfaces.Count > 1)
@@ -1228,7 +1235,10 @@ namespace Win32InteropBuilder.Generators
             }
 
             // don't set ? on value type as this creates a Nullable<struct> which is managed/non-blittable
-            if (isOptional && def.TypeName != IntPtrTypeName && !parameterType.IsValueType)
+            if (isOptional &&
+                def.TypeName != IntPtrTypeName &&
+                !parameterType.IsValueType &&
+                (parameterType is not InterfaceType itype || itype.IsIUnknownDerived)) // non-IUnknown are generated as structs
             {
                 def.TypeName += "?";
             }
