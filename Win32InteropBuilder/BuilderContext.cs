@@ -221,6 +221,56 @@ namespace Win32InteropBuilder
             return true;
         }
 
+        public virtual bool GeneratesEquatable(BuilderType type)
+        {
+            ArgumentNullException.ThrowIfNull(type);
+            return !type.IsNested && type.Fields.Count == 1 && (
+                type.Fields[0].TypeFullName!.NoPointerFullName == WellKnownTypes.SystemVoid.FullName ||
+                type.Fields[0].TypeFullName!.NoPointerFullName == WellKnownTypes.SystemByte.FullName ||
+                type.Fields[0].TypeFullName!.NoPointerFullName == WellKnownTypes.SystemSByte.FullName ||
+                type.Fields[0].TypeFullName!.NoPointerFullName == WellKnownTypes.SystemInt16.FullName ||
+                type.Fields[0].TypeFullName!.NoPointerFullName == WellKnownTypes.SystemInt32.FullName ||
+                type.Fields[0].TypeFullName!.NoPointerFullName == WellKnownTypes.SystemInt64.FullName ||
+                type.Fields[0].TypeFullName!.NoPointerFullName == WellKnownTypes.SystemUInt16.FullName ||
+                type.Fields[0].TypeFullName!.NoPointerFullName == WellKnownTypes.SystemUInt32.FullName ||
+                type.Fields[0].TypeFullName!.NoPointerFullName == WellKnownTypes.SystemUInt64.FullName ||
+                type.Fields[0].TypeFullName!.NoPointerFullName == WellKnownTypes.SystemIntPtr.FullName ||
+                type.Fields[0].TypeFullName!.NoPointerFullName == WellKnownTypes.SystemUIntPtr.FullName);
+        }
+
+        public virtual bool GeneratesToString(BuilderType type) // considered only if equatable is true
+        {
+            ArgumentNullException.ThrowIfNull(type);
+            return GeneratesEquatable(type);
+        }
+
+        public virtual bool GeneratesNullMember(BuilderType type)
+        {
+            ArgumentNullException.ThrowIfNull(type);
+            return GeneratesEquatable(type);
+        }
+
+        public virtual Type? GetCallingConventionType(BuilderType type, BuilderMethod method)
+        {
+            ArgumentNullException.ThrowIfNull(type);
+            ArgumentNullException.ThrowIfNull(method);
+
+            // the well-known weird interfaces from outer space
+            if (type.FullName.ToString().StartsWith("Windows.Win32.UI.Controls.RichEdit.ITextServices") ||
+                type.FullName.ToString().StartsWith("Windows.Win32.UI.Controls.RichEdit.ITextHost"))
+                return typeof(CallConvThiscall);
+
+            if (method.ReturnTypeFullName != null)
+            {
+                // if you have a few days to spend, read (and try to understand) this https://github.com/microsoft/CsWin32/issues/167
+                var mapped = MapType(method.ReturnTypeFullName);
+                if (mapped.FullName != FullName.HRESULT && mapped.IsNativeTypeDef)
+                    return typeof(CallConvStdcall);
+            }
+
+            return null; // => CallConvMemberFunction
+        }
+
         // last error is globally not well defined in Win32metadata
         // so the logic is to set it when it's not defined even if it's not always ok
         public virtual bool HasSetLastError(BuilderMethod method)

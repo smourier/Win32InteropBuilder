@@ -382,11 +382,8 @@ namespace Win32InteropBuilder.Generators
                 }
             }
 
-            var generateEquatable = type.Fields.Count == 1 && (
-                type.Fields[0].TypeFullName!.NoPointerFullName == WellKnownTypes.SystemVoid.FullName ||
-                type.Fields[0].TypeFullName!.NoPointerFullName == WellKnownTypes.SystemIntPtr.FullName ||
-                type.Fields[0].TypeFullName!.NoPointerFullName == WellKnownTypes.SystemUIntPtr.FullName);
-            var generateNull = generateEquatable;
+            var generateEquatable = context.GeneratesEquatable(type);
+            var generateNull = context.GeneratesNullMember(type);
 
             var ns = type.FullName.NestedName;
             string strucTypeName;
@@ -475,12 +472,30 @@ namespace Win32InteropBuilder.Generators
                 if (generateEquatable)
                 {
                     var fieldName = GetIdentifier(type.Fields[0].Name);
+                    var fieldMapped = context.MapType(type.Fields[0].TypeFullName!);
+                    var fieldTypeName = GetTypeReferenceName(fieldMapped.GetGeneratedName(context));
+                    if (fieldTypeName == VoidTypeName)
+                    {
+                        fieldTypeName = IntPtrTypeName;
+                    }
+
+                    context.CurrentWriter.WriteLine();
+                    context.CurrentWriter.WriteLine($"public {strucTypeName}({fieldTypeName} value) => this.{fieldName} = value;");
+
+                    var generateToString = context.GeneratesToString(type);
+                    if (generateToString)
+                    {
+                        context.CurrentWriter.WriteLine($"public override string ToString() => $\"0x{{{fieldName}:x}}\";");
+                    }
+
                     context.CurrentWriter.WriteLine();
                     context.CurrentWriter.WriteLine($"public override readonly bool Equals(object? obj) => obj is {strucTypeName} value && Equals(value);");
                     context.CurrentWriter.WriteLine($"public readonly bool Equals({strucTypeName} other) => other.{fieldName} == {fieldName};");
                     context.CurrentWriter.WriteLine($"public override readonly int GetHashCode() => {fieldName}.GetHashCode();");
                     context.CurrentWriter.WriteLine($"public static bool operator ==({strucTypeName} left, {strucTypeName} right) => left.Equals(right);");
                     context.CurrentWriter.WriteLine($"public static bool operator !=({strucTypeName} left, {strucTypeName} right) => !left.Equals(right);");
+                    context.CurrentWriter.WriteLine($"public static implicit operator {fieldTypeName}({strucTypeName} value) => value.{fieldName};");
+                    context.CurrentWriter.WriteLine($"public static implicit operator {strucTypeName}({fieldTypeName} value) => new(value);");
                 }
             });
         }
@@ -814,6 +829,12 @@ namespace Win32InteropBuilder.Generators
             if (!options.HasFlag(CSharpGeneratorMethodOptions.ForImplementation))
             {
                 context.CurrentWriter.WriteLine("[PreserveSig]");
+
+                var cc = context.GetCallingConventionType(type, method);
+                if (cc != null)
+                {
+                    context.CurrentWriter.WriteLine($"[UnmanagedCallConv(CallConvs = [typeof({cc.Name})])]");
+                }
             }
 
             if (returnTypeName == null)

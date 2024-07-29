@@ -51,6 +51,7 @@ namespace Win32InteropBuilder.Model
         public virtual bool IsNested { get; set; }
         public virtual bool IsValueType { get; set; }
         public virtual bool IsHandle { get; set; }
+        public virtual bool IsNativeTypeDef { get; set; }
         public virtual IList<BuilderMethod> Methods => _methods;
         public virtual IList<BuilderField> Fields => _fields;
         public virtual IList<FullName> Interfaces => _interfaces;
@@ -150,6 +151,7 @@ namespace Win32InteropBuilder.Model
             Guid = context.GetMetadataGuid(typeDef.GetCustomAttributes());
             IsValueType = context.MetadataReader.IsValueType(typeDef);
             IsHandle = context.IsHandleType(this, typeDef);
+            IsNativeTypeDef = context.MetadataReader.IsNativeTypedef(typeDef);
             TypeAttributes = typeDef.Attributes;
             IsNested = typeDef.IsNested;
 
