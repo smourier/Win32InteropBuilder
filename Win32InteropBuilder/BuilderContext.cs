@@ -164,6 +164,12 @@ namespace Win32InteropBuilder
             return fullName;
         }
 
+        public virtual Guid? GetTypeGuid(FullName typeFullName)
+        {
+            ArgumentNullException.ThrowIfNull(typeFullName);
+            return null;
+        }
+
         public virtual bool IsConstableType(FullName typeFullName)
         {
             ArgumentNullException.ThrowIfNull(typeFullName);

@@ -683,7 +683,8 @@ namespace Win32InteropBuilder.Generators
                 return;
             }
 
-            context.CurrentWriter.WriteLine($"[GeneratedComInterface, Guid(\"{type.Guid.GetValueOrDefault()}\")]");
+            var guid = type.Guid ?? context.GetTypeGuid(type.FullName) ?? Guid.Empty;
+            context.CurrentWriter.WriteLine($"[GeneratedComInterface, Guid(\"{guid}\")]");
             context.CurrentWriter.Write($"public partial interface {GetIdentifier(type.GetGeneratedName(context))}");
 
             if (type.Interfaces.Count > 0)
@@ -1088,11 +1089,6 @@ namespace Win32InteropBuilder.Generators
                 def.TypeName != UIntPtrTypeName)
             {
                 def.Direction = ParameterDirection.In;
-            }
-
-            if (parameterType is InterfaceType ifaceType && !ifaceType.IsIUnknownDerived)
-            {
-                var rt = context.AllTypes[parameter.TypeFullName];
             }
 
             if (parameter.Attributes.HasFlag(ParameterAttributes.Optional) && pt != null)
