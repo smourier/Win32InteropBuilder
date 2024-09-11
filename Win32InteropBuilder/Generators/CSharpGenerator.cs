@@ -1279,6 +1279,11 @@ namespace Win32InteropBuilder.Generators
                     });
             }
 
+            if (mapped is InterfaceType itype2 && itype2.IsIUnknownDerived && def.MarshalUsing == null)
+            {
+                def.MarshalUsing = new ParameterMarshalUsing { TypeName = $"UniqueComInterfaceMarshaller<{def.TypeName}>" };
+            }
+
             return context.GetParameterDef(parameter, def);
         }
 
