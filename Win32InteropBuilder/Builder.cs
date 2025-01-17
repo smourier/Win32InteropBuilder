@@ -259,7 +259,7 @@ namespace Win32InteropBuilder
                 context.AddDependencies(type.FullName);
             }
 
-            ExcludeTypesFromBuild(context);
+            ExcludeTypesFromBuild(context, excludes.Select(t => t.FullName));
 
             foreach (var input in context.Configuration.MemberInputs.Where(m => m.MatchesCount == 0))
             {
@@ -273,13 +273,19 @@ namespace Win32InteropBuilder
             ArgumentNullException.ThrowIfNull(type);
         }
 
-        protected virtual void ExcludeTypesFromBuild(BuilderContext context)
+        protected virtual void ExcludeTypesFromBuild(BuilderContext context, IEnumerable<FullName> builderTypes)
         {
             ArgumentNullException.ThrowIfNull(context);
+            ArgumentNullException.ThrowIfNull(builderTypes);
             ArgumentNullException.ThrowIfNull(context.Configuration);
             ArgumentNullException.ThrowIfNull(context.Configuration.Generation);
 
             context.TypesToBuild.Remove(FullName.IUnknown);
+
+            foreach (var type in builderTypes)
+            {
+                context.TypesToBuild.Remove(type);
+            }
         }
 
         // unsed today
