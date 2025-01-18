@@ -247,6 +247,9 @@ namespace Win32InteropBuilder
 
             foreach (var type in includedByTypes)
             {
+                if (type.FullName.ToString() == "Windows.Win32.Graphics.Gdi.Apis")
+                {
+                }
                 if (excludedByTypes.Contains(type))
                     continue;
 
@@ -259,7 +262,7 @@ namespace Win32InteropBuilder
                 context.AddDependencies(type.FullName);
             }
 
-            ExcludeTypesFromBuild(context, excludes.Select(t => t.FullName));
+            ExcludeTypesFromBuild(context);
 
             foreach (var input in context.Configuration.MemberInputs.Where(m => m.MatchesCount == 0))
             {
@@ -273,19 +276,13 @@ namespace Win32InteropBuilder
             ArgumentNullException.ThrowIfNull(type);
         }
 
-        protected virtual void ExcludeTypesFromBuild(BuilderContext context, IEnumerable<FullName> builderTypes)
+        protected virtual void ExcludeTypesFromBuild(BuilderContext context)
         {
             ArgumentNullException.ThrowIfNull(context);
-            ArgumentNullException.ThrowIfNull(builderTypes);
             ArgumentNullException.ThrowIfNull(context.Configuration);
             ArgumentNullException.ThrowIfNull(context.Configuration.Generation);
 
             context.TypesToBuild.Remove(FullName.IUnknown);
-
-            foreach (var type in builderTypes)
-            {
-                context.TypesToBuild.Remove(type);
-            }
         }
 
         // unsed today
