@@ -1293,6 +1293,12 @@ namespace Win32InteropBuilder.Generators
             return type.FullName == FullName.PWSTR || type.FullName == FullName.PSTR || type.FullName == FullName.BSTR;
         }
 
+        protected virtual bool IsImplicitInOut(FullName typeName)
+        {
+            ArgumentNullException.ThrowIfNull(typeName);
+            return typeName == FullName.PWSTR || typeName == FullName.PSTR || typeName == FullName.BSTR;
+        }
+
         protected virtual CSharpGeneratorParameter GenerateCode(
             BuilderContext context,
             BuilderType type,
@@ -1358,7 +1364,7 @@ namespace Win32InteropBuilder.Generators
             }
 
             string? direction = null;
-            if (def.Direction != null)
+            if (def.Direction != null && (def.Direction != ParameterDirection.Ref || !IsImplicitInOut(parameter.TypeFullName))) // '[In,Out] PWSTR' doesn't generate 'ref PWSTR'
             {
                 if (options.HasFlag(CSharpGeneratorParameterOptions.OutAsRef) && def.Direction == ParameterDirection.Out)
                 {
