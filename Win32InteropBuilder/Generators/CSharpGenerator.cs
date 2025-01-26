@@ -1062,6 +1062,18 @@ namespace Win32InteropBuilder.Generators
             if (IsUnknownComOutPtr(parameter))
                 return GetUnknownComOutPtr(context, parameter, def, options);
 
+            if (parameter.Attributes.HasFlag(ParameterAttributes.Out) &&
+                parameter.NativeArray != null &&
+                context.AllTypes.TryGetValue(mapped.FullName.NoPointerFullName, out var pointed) &&
+                pointed is InterfaceType iface &&
+                iface.IsIUnknownDerived)
+            {
+                // don't know how to preserve unique instances with an array... use IntPtr
+                //parameterType = WellKnownTypes.SystemIntPtr;
+                //mapped = parameterType;
+                //def.TypeName = GetTypeReferenceName(mapped.GetGeneratedName(context));
+            }
+
             if (parameter.Attributes.HasFlag(ParameterAttributes.Out))
             {
                 if (parameter.Attributes.HasFlag(ParameterAttributes.In))
@@ -1223,6 +1235,18 @@ namespace Win32InteropBuilder.Generators
                     def.Direction = null;
                     def.IsIn = true;
                 }
+
+                if (parameter.Attributes.HasFlag(ParameterAttributes.Out) &&
+                    !parameter.Attributes.HasFlag(ParameterAttributes.In) &&
+                    parameter.NativeArray != null &&
+                    context.AllTypes.TryGetValue(mapped.FullName.NoPointerFullName, out var pointed2) &&
+                    pointed2 is InterfaceType iface2 &&
+                    iface2.IsIUnknownDerived)
+                {
+                    // don't know how to preserve unique instances with an array... use IntPtr
+                    def.TypeName = IntPtrTypeName + "[]";
+                }
+
                 return context.GetParameterDef(parameter, def);
             }
 
