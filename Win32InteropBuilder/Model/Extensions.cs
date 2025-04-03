@@ -286,7 +286,6 @@ namespace Win32InteropBuilder.Model
         public static bool IsHandle(this MetadataReader reader, TypeDefinition type, SignatureTypeProvider signatureTypeProvider)
         {
             ArgumentNullException.ThrowIfNull(reader);
-            ArgumentNullException.ThrowIfNull(type);
             ArgumentNullException.ThrowIfNull(signatureTypeProvider);
             if (!reader.IsNativeTypedef(type))
                 return false;
