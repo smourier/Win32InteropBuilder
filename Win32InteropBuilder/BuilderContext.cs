@@ -19,7 +19,7 @@ namespace Win32InteropBuilder
             ArgumentNullException.ThrowIfNull(generator);
             Configuration = configuration;
             Generator = generator;
-            SignatureTypeProvider = new SignatureTypeProvider(this);
+            SignatureTypeProvider = CreateSignatureTypeProvider();
             CustomAttributeTypeProvider = new CustomAttributeTypeProvider(this);
             ImplicitNamespaces.Add("System");
             ImplicitNamespaces.Add(BuilderType.GeneratedInteropNamespace);
@@ -56,6 +56,7 @@ namespace Win32InteropBuilder
         public virtual BuilderParameter CreateBuilderParameter(string name, int sequenceNumber) => new(name, sequenceNumber);
         public virtual BuilderField CreateBuilderField(string name) => new(name);
         public virtual BuilderType CreateInlineArrayType(BuilderType elementType, int size, FullName? fullName = null) => new InlineArrayType(elementType, size, fullName);
+        public virtual SignatureTypeProvider CreateSignatureTypeProvider() => new(this);
 
         public virtual FullName GetFullName(TypeDefinition typeDef)
         {

@@ -139,7 +139,7 @@ namespace Win32InteropBuilder.Model
             return reader.GetFullName(reader.GetTypeReference(attribute));
         }
 
-        public static IReadOnlyList<FullName> GetCustomAttributesFullNames(this MetadataReader reader, CustomAttributeHandleCollection handles) => GetCustomAttributes(reader, handles).Select(reader.GetFullName).ToArray();
+        public static IReadOnlyList<FullName> GetCustomAttributesFullNames(this MetadataReader reader, CustomAttributeHandleCollection handles) => [.. GetCustomAttributes(reader, handles).Select(reader.GetFullName)];
         public static IEnumerable<CustomAttribute> GetCustomAttributes(this MetadataReader reader, CustomAttributeHandleCollection handles)
         {
             ArgumentNullException.ThrowIfNull(reader);

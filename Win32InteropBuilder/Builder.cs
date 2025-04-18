@@ -99,8 +99,8 @@ namespace Win32InteropBuilder
             context.LogInfo($"Output path: {configuration.OutputDirectoryPath}");
             context.LogInfo($"Output encoding: {configuration.FinalOutputEncoding.WebName}");
             context.LogInfo($"Running {builderType!.FullName} builder...");
-            context.LogInfo();
             builder.Build(context);
+            context.LogInfo("Builder has finished successfully.");
         }
 
         public virtual BuilderContext CreateBuilderContext(BuilderConfiguration configuration, IGenerator generator) => new(configuration, generator);

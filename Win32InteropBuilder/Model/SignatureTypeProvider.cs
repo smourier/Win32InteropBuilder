@@ -74,16 +74,23 @@ namespace Win32InteropBuilder.Model
             if (Context.AllTypes.TryGetValue(fn, out var type))
                 return type;
 
+            return GetTypeFromFullName(fn);
+        }
+
+        public virtual BuilderType GetTypeFromFullName(FullName fullName)
+        {
+            ArgumentNullException.ThrowIfNull(fullName);
+
             // check anonymous embedded types
-            if (fn.Namespace == string.Empty && Context.CurrentTypes.Count > 0)
+            if (fullName.Namespace == string.Empty && Context.CurrentTypes.Count > 0)
             {
                 var currentType = Context.CurrentTypes.Peek();
-                var nestedType = currentType.NestedTypes.FirstOrDefault(t => t.NestedName == fn.Name);
+                var nestedType = currentType.NestedTypes.FirstOrDefault(t => t.NestedName == fullName.Name);
                 if (nestedType != null)
                     return Context.AllTypes[nestedType];
             }
 
-            Context.LogWarning("Can't resolve: " + fn.Name);
+            Context.LogWarning($"Can't resolve: {fullName}");
             return WellKnownTypes.SystemObject;
         }
 
