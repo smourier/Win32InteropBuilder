@@ -1,7 +1,9 @@
 # Win32InteropBuilder
-A tool to generate .NET AOT-friendly Win32 interop code from Microsoft.Windows.SDK.Win32Metadata package.
+A tool to generate .NET AOT-friendly Win32 interop code from Microsoft.Windows.SDK.Win32Metadata or any .winmd package "related" to it.
 
 An example of this is [DirectNAot](https://github.com/smourier/DirectNAot) which is an AOT-friendly version of [DirectN](https://github.com/smourier/DirectN).
+
+Another example is [WebView2Aot](https://github.com/smourier/WebView2Aot) which is an AOT-compatible bindings dll for [WebView2](https://developer.microsoft.com/en-us/microsoft-edge/webview2?form=MA13LH).
 
 The key points that drive how code is generated and built:
 
