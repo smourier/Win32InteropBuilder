@@ -75,7 +75,6 @@ namespace Win32InteropBuilder
                     {
                         throw new EnumBasedException<Win32InteropBuilderExceptionCode>(Win32InteropBuilderExceptionCode.InvalidPatchesConfiguration, ex);
                     }
-
                 }
             }
 
@@ -119,10 +118,90 @@ namespace Win32InteropBuilder
             using var pe = new PEReader(stream);
             context.MetadataReader = pe.GetMetadataReader();
             GatherTypes(context);
+            RunGlobalPatches(context);
             if (context.Configuration.GenerateFiles)
             {
                 GenerateTypes(context);
             }
+        }
+
+        protected virtual void RunGlobalPatches(BuilderContext context)
+        {
+            ArgumentNullException.ThrowIfNull(context);
+
+            // meant to work around this: https://github.com/microsoft/win32metadata/issues/2086
+            RunOptionalArgumentPatches(context);
+        }
+
+        protected virtual void RunOptionalArgumentPatches(BuilderContext context)
+        {
+            ArgumentNullException.ThrowIfNull(context);
+            ArgumentNullException.ThrowIfNull(context.Configuration);
+
+            if (context.Configuration.Patches?.OptionalArguments == null || context.Configuration.Patches.OptionalArguments.Count == 0)
+                return;
+
+            var dic = new Dictionary<FullName, List<PatchMethod>>();
+            foreach (var patch in context.Configuration.Patches.OptionalArguments)
+            {
+                if (patch == null)
+                    continue;
+
+                var split = patch.Split("::");
+                if (split.Length != 3)
+                    continue;
+
+                var fn = new FullName(split[0]);
+                if (!dic.TryGetValue(fn, out var methods))
+                {
+                    methods = [];
+                    dic[fn] = methods;
+                }
+
+                var method = methods.Find(m => m.Name.EqualsIgnoreCase(split[1]));
+                if (method == null)
+                {
+                    method = new PatchMethod(split[1]);
+                    methods.Add(method);
+                }
+
+                if (!method.Arguments.Contains(split[2]))
+                {
+                    method.Arguments.Add(split[2]);
+                }
+            }
+
+            foreach (var kv in dic)
+            {
+                var finalType = context.AllTypes[kv.Key];
+                foreach (var method in kv.Value)
+                {
+                    var existing = finalType.Methods.FirstOrDefault(m => m.Name.EqualsIgnoreCase(method.Name));
+                    if (existing == null)
+                    {
+                        context.LogWarning($"Cannot find method '{method.Name}' of '{kv.Key}' type for setting an optional argument.");
+                        continue;
+                    }
+
+                    foreach (var arg in method.Arguments)
+                    {
+                        var existingArg = existing.Parameters.FirstOrDefault(p => p.Name.EqualsIgnoreCase(arg));
+                        if (existingArg == null)
+                        {
+                            context.LogWarning($"Cannot find argument '{arg}' of method '{method.Name}' of '{kv.Key}' type.");
+                            continue;
+                        }
+
+                        existingArg.Attributes |= ParameterAttributes.Optional;
+                    }
+                }
+            }
+        }
+
+        private sealed class PatchMethod(string name)
+        {
+            public string Name { get; } = name;
+            public List<string> Arguments { get; } = [];
         }
 
         protected virtual void GatherTypes(BuilderContext context)

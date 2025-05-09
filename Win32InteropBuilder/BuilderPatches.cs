@@ -6,5 +6,6 @@ namespace Win32InteropBuilder
     {
         public IList<BuilderPatchType> Types { get; set; } = [];
         public IList<BuilderPatchMember> Methods { get; set; } = [];
+        public IList<string> OptionalArguments { get; set; } = [];
     }
 }
