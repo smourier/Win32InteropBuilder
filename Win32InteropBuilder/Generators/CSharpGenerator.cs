@@ -715,6 +715,8 @@ namespace Win32InteropBuilder.Generators
             ArgumentNullException.ThrowIfNull(context.CurrentWriter);
             ArgumentNullException.ThrowIfNull(type);
 
+            var patch = context.Configuration.GetTypePatch(type);
+
             if (type.SupportedOSPlatform != null)
             {
                 context.CurrentWriter.WriteLine($"[SupportedOSPlatform(\"{type.SupportedOSPlatform}\")]");
@@ -752,6 +754,15 @@ namespace Win32InteropBuilder.Generators
                         context.CurrentWriter.Write(GetValueAsString(context, ut, def));
                     }
                     context.CurrentWriter.WriteLine(',');
+                }
+
+                if (patch != null)
+                {
+                    // add new fields
+                    foreach (var field in patch.Fields.Where(f => f.NewName == null && !string.IsNullOrWhiteSpace(f.Value)))
+                    {
+                        context.CurrentWriter.WriteLine($"{GetIdentifier(field.Name)} = {field.Value},");
+                    }
                 }
             });
         }
@@ -1327,7 +1338,7 @@ namespace Win32InteropBuilder.Generators
             BuilderContext context,
             BuilderType type,
             BuilderMethod method,
-            BuilderPatchMember? methodPatch,
+            BuilderPatchMethod? methodPatch,
             BuilderParameter parameter,
             int parameterIndex,
             CSharpGeneratorParameterOptions options)

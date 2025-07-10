@@ -14,11 +14,11 @@ namespace Win32InteropBuilder
         }
 
         public virtual string? TypeName { get; set; }
-        public virtual IList<BuilderPatchMember> Methods { get; set; } = [];
-        // we can't patch fields, yet
+        public virtual IList<BuilderPatchMethod> Methods { get; set; } = [];
+        public virtual IList<BuilderPatchField> Fields { get; set; } = [];
 
         public virtual bool Matches(BuilderType type) => !_matcher.Value.IsReverse && _matcher.Value.Matches(type);
 
-        public override string ToString() => $"{TypeName} ({string.Join(Environment.NewLine, Methods)})";
+        public override string ToString() => $"{TypeName} ({string.Join(Environment.NewLine, Methods)}) ({string.Join(Environment.NewLine, Fields)})";
     }
 }
