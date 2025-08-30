@@ -228,6 +228,23 @@ namespace Win32InteropBuilder
             return true;
         }
 
+        public virtual UniqueFieldType? GetOneValueFieldType(BuilderType type)
+        {
+            ArgumentNullException.ThrowIfNull(type);
+            if (type.IsNested || type.Fields.Count != 1)
+                return null;
+
+            var fieldType = type.Fields[0].TypeFullName;
+            if (fieldType == null)
+                return null;
+
+            var mapped = MapType(fieldType);
+            if (mapped.IsNested)
+                return null;
+
+            return new UniqueFieldType(type, type.Fields[0], mapped);
+        }
+
         public virtual bool GeneratesEquatable(BuilderType type)
         {
             ArgumentNullException.ThrowIfNull(type);

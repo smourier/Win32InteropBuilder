@@ -19,10 +19,13 @@ namespace Win32InteropBuilder.Generators
         public CSharpGeneratorConfiguration Configuration { get; private set; } = new();
         public IReadOnlyCollection<FullName> ConstableTypes => _constableTypes;
 
+#pragma warning disable IDE1006 // Naming Styles
         private const string IntPtrTypeName = "nint";
         private const string UIntPtrTypeName = "nuint";
         private const string VoidTypeName = "void";
         private const string VTablePtr = "VTablePtr";
+        private const string ByteArrayTypeName = "byte[]";
+#pragma warning restore IDE1006 // Naming Styles
 
         public override string ToString() => Name;
         public virtual void Configure(JsonElement element)
@@ -383,6 +386,33 @@ namespace Win32InteropBuilder.Generators
             }
 
             var generateEquatable = context.GeneratesEquatable(type);
+            var oneValueFieldType = context.GetOneValueFieldType(type);
+            string? oneFieldTypeName = null;
+            if (oneValueFieldType != null)
+            {
+                if (IsStringType(oneValueFieldType.ContainerType))
+                {
+                    oneValueFieldType = null;
+                }
+                else
+                {
+                    if (oneValueFieldType.FieldType is InterfaceType ||
+                        oneValueFieldType.FieldType is DelegateType ||
+                        oneValueFieldType.FieldType is PointerType)
+                    {
+                        oneFieldTypeName = IntPtrTypeName;
+                    }
+                    else if (oneValueFieldType.FieldType is InlineArrayType iat)
+                    {
+                        oneFieldTypeName = GetTypeReferenceName(iat.ElementType.GetGeneratedName(context)) + "[]";
+                    }
+                    else
+                    {
+                        oneFieldTypeName = GetTypeReferenceName(oneValueFieldType.FieldType.GetGeneratedName(context));
+                    }
+                }
+            }
+
             var generateNull = context.GeneratesNullMember(type);
 
             var ns = type.FullName.NestedName;
@@ -396,10 +426,21 @@ namespace Win32InteropBuilder.Generators
             {
                 strucTypeName = GetIdentifier(type.GetGeneratedName(context));
 
-                string? derives = null;
+                var derived = new List<string>();
                 if (generateEquatable)
                 {
-                    derives = $" : IEquatable<{strucTypeName}>";
+                    derived.Add($"IEquatable<{strucTypeName}>");
+                }
+
+                if (oneValueFieldType != null)
+                {
+                    derived.Add($"IValueGet<{oneFieldTypeName}>");
+                }
+
+                string? derives = null;
+                if (derived.Count > 0)
+                {
+                    derives = $" : {string.Join(", ", derived)}";
                 }
 
                 context.CurrentWriter.Write($"public partial struct {strucTypeName}{derives}");
@@ -496,6 +537,23 @@ namespace Win32InteropBuilder.Generators
                     context.CurrentWriter.WriteLine($"public static bool operator !=({strucTypeName} left, {strucTypeName} right) => !left.Equals(right);");
                     context.CurrentWriter.WriteLine($"public static implicit operator {fieldTypeName}({strucTypeName} value) => value.{fieldName};");
                     context.CurrentWriter.WriteLine($"public static implicit operator {strucTypeName}({fieldTypeName} value) => new(value);");
+                }
+
+                if (oneValueFieldType != null)
+                {
+                    var fieldName = GetIdentifier(oneValueFieldType.Field.Name);
+                    context.CurrentWriter.WriteLine();
+                    if (oneValueFieldType.FieldType is InlineArrayType iat)
+                    {
+                        var elementTypeName = GetTypeReferenceName(iat.ElementType.GetGeneratedName(context));
+                        context.CurrentWriter.WriteLine($"readonly {elementTypeName}[]? IValueGet<{elementTypeName}[]>.GetValue() => ((ReadOnlySpan<{elementTypeName}>){fieldName}).ToArray();");
+                        context.CurrentWriter.WriteLine($"readonly object? IValueGet.GetValue() => ((ReadOnlySpan<{elementTypeName}>){fieldName}).ToArray();");
+                    }
+                    else
+                    {
+                        context.CurrentWriter.WriteLine($"readonly {oneFieldTypeName} IValueGet<{oneFieldTypeName}>.GetValue() => {fieldName};");
+                        context.CurrentWriter.WriteLine($"readonly object? IValueGet.GetValue() => {fieldName};");
+                    }
                 }
             });
         }
@@ -1322,16 +1380,29 @@ namespace Win32InteropBuilder.Generators
             return context.GetParameterDef(parameter, def);
         }
 
+        protected virtual bool IsStringType(BuilderType type)
+        {
+            ArgumentNullException.ThrowIfNull(type);
+            return type.FullName == FullName.PWSTR ||
+                type.FullName == FullName.PSTR ||
+                type.FullName == FullName.BSTR ||
+                type.FullName == FullName.HSTRING;
+        }
+
         protected virtual bool IsArrayType(BuilderType type)
         {
             ArgumentNullException.ThrowIfNull(type);
-            return type.FullName == FullName.PWSTR || type.FullName == FullName.PSTR || type.FullName == FullName.BSTR;
+            return type.FullName == FullName.PWSTR ||
+                type.FullName == FullName.PSTR ||
+                type.FullName == FullName.BSTR;
         }
 
         protected virtual bool IsImplicitInOut(FullName typeName)
         {
             ArgumentNullException.ThrowIfNull(typeName);
-            return typeName == FullName.PWSTR || typeName == FullName.PSTR || typeName == FullName.BSTR;
+            return typeName == FullName.PWSTR ||
+                typeName == FullName.PSTR ||
+                typeName == FullName.BSTR;
         }
 
         protected virtual CSharpGeneratorParameter GenerateCode(

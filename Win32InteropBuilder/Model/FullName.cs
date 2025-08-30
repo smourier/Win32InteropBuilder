@@ -14,6 +14,7 @@ namespace Win32InteropBuilder.Model
         public const string FoundationNamespace = "Windows.Win32.Foundation";
         public const string ComNamespace = "Windows.Win32.System.Com";
         public const string MetadataNamespace = FoundationNamespace + ".Metadata";
+        public const string WinRTNamespace = "Windows.Win32.System.WinRT";
 
         public static FullName SystemIntPtr { get; } = new(typeof(nint));
         public static FullName SystemValueType { get; } = new(typeof(ValueType));
@@ -29,6 +30,7 @@ namespace Win32InteropBuilder.Model
         public static FullName PWSTR { get; } = new(FoundationNamespace + ".PWSTR");
         public static FullName PSTR { get; } = new(FoundationNamespace + ".PSTR");
         public static FullName BSTR { get; } = new(FoundationNamespace + ".BSTR");
+        public static FullName HSTRING { get; } = new(WinRTNamespace + ".HSTRING");
         public static FullName NativeTypedefAttribute { get; } = new(MetadataNamespace + ".NativeTypedefAttribute");
         public static FullName MemorySizeAttribute { get; } = new(MetadataNamespace + ".MemorySizeAttribute");
         public static FullName DocumentationAttribute { get; } = new(MetadataNamespace + ".DocumentationAttribute");
