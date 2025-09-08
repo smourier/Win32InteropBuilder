@@ -526,7 +526,7 @@ namespace Win32InteropBuilder.Generators
                     var generateToString = context.GeneratesToString(type);
                     if (generateToString)
                     {
-                        context.CurrentWriter.WriteLine($"public override string ToString() => $\"0x{{{fieldName}:x}}\";");
+                        context.CurrentWriter.WriteLine($"public override readonly string ToString() => $\"0x{{{fieldName}:x}}\";");
                     }
 
                     context.CurrentWriter.WriteLine();
