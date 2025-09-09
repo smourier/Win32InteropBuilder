@@ -390,7 +390,7 @@ namespace Win32InteropBuilder.Generators
             string? oneFieldTypeName = null;
             if (oneValueFieldType != null)
             {
-                if (IsStringType(oneValueFieldType.ContainerType))
+                if (IsStringType(oneValueFieldType.ContainerType.FullName))
                 {
                     oneValueFieldType = null;
                 }
@@ -1005,6 +1005,14 @@ namespace Win32InteropBuilder.Generators
             {
                 var parameter = method.Parameters[j];
 
+                if (method.Name == "GetVersionFromFile" && parameter.Name == "pwzBuffer")
+                {
+                }
+
+                if (method.Name == "GetAllocatedString" && parameter.Name == "ppwszValue")
+                {
+                }
+
                 var parameterOptions = CSharpGeneratorParameterOptions.None;
                 if (options.HasFlag(CSharpGeneratorMethodOptions.OutAsRef))
                 {
@@ -1243,7 +1251,7 @@ namespace Win32InteropBuilder.Generators
                     def.MarshalAs = null;
                 }
 
-                var implicitArray = IsArrayType(mapped) && pt == null;
+                var implicitArray = IsArrayType(mapped.FullName) && pt == null;
                 if (!implicitArray)
                 {
                     def.TypeName += "[]";
@@ -1380,21 +1388,21 @@ namespace Win32InteropBuilder.Generators
             return context.GetParameterDef(parameter, def);
         }
 
-        protected virtual bool IsStringType(BuilderType type)
+        protected virtual bool IsStringType(FullName typeName)
         {
-            ArgumentNullException.ThrowIfNull(type);
-            return type.FullName == FullName.PWSTR ||
-                type.FullName == FullName.PSTR ||
-                type.FullName == FullName.BSTR ||
-                type.FullName == FullName.HSTRING;
+            ArgumentNullException.ThrowIfNull(typeName);
+            return typeName == FullName.PWSTR ||
+                typeName == FullName.PSTR ||
+                typeName == FullName.BSTR ||
+                typeName == FullName.HSTRING;
         }
 
-        protected virtual bool IsArrayType(BuilderType type)
+        protected virtual bool IsArrayType(FullName typeName)
         {
-            ArgumentNullException.ThrowIfNull(type);
-            return type.FullName == FullName.PWSTR ||
-                type.FullName == FullName.PSTR ||
-                type.FullName == FullName.BSTR;
+            ArgumentNullException.ThrowIfNull(typeName);
+            return typeName == FullName.PWSTR ||
+                typeName == FullName.PSTR ||
+                typeName == FullName.BSTR;
         }
 
         protected virtual bool IsImplicitInOut(FullName typeName)
@@ -1470,7 +1478,9 @@ namespace Win32InteropBuilder.Generators
             }
 
             string? direction = null;
-            if (def.Direction != null && (def.Direction != ParameterDirection.Ref || !IsImplicitInOut(parameter.TypeFullName))) // '[In,Out] PWSTR' doesn't generate 'ref PWSTR'
+            if (def.Direction != null &&
+                !IsArrayType(parameter.TypeFullName) &&
+                (def.Direction != ParameterDirection.Ref || !IsImplicitInOut(parameter.TypeFullName))) // '[In,Out] PWSTR' doesn't generate 'ref PWSTR'
             {
                 if (options.HasFlag(CSharpGeneratorParameterOptions.OutAsRef) && def.Direction == ParameterDirection.Out)
                 {
