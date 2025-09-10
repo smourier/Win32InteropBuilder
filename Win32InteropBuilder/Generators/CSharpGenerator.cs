@@ -871,10 +871,16 @@ namespace Win32InteropBuilder.Generators
             if (method.ImportModuleName != null)
             {
                 var module = method.ImportModuleName;
+
+                // strip ending .dll if any and if no other dots
                 const string dll = ".dll";
                 if (module.EndsWith(dll, StringComparison.InvariantCultureIgnoreCase))
                 {
-                    module = module[..^dll.Length];
+                    var noDll = module[..^dll.Length];
+                    if (noDll.IndexOf('.') < 0)
+                    {
+                        module = noDll;
+                    }
                 }
 
                 context.CurrentWriter.Write($"[LibraryImport(\"{module}\"");
@@ -1004,14 +1010,6 @@ namespace Win32InteropBuilder.Generators
             for (var j = 0; j < method.Parameters.Count; j++)
             {
                 var parameter = method.Parameters[j];
-
-                if (method.Name == "GetVersionFromFile" && parameter.Name == "pwzBuffer")
-                {
-                }
-
-                if (method.Name == "GetAllocatedString" && parameter.Name == "ppwszValue")
-                {
-                }
 
                 var parameterOptions = CSharpGeneratorParameterOptions.None;
                 if (options.HasFlag(CSharpGeneratorMethodOptions.OutAsRef))
