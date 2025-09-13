@@ -1389,26 +1389,26 @@ namespace Win32InteropBuilder.Generators
         protected virtual bool IsStringType(FullName typeName)
         {
             ArgumentNullException.ThrowIfNull(typeName);
-            return typeName == FullName.PWSTR ||
-                typeName == FullName.PSTR ||
-                typeName == FullName.BSTR ||
-                typeName == FullName.HSTRING;
+            return typeName.Name == FullName.PWSTR.Name ||
+                typeName.Name == FullName.PSTR.Name ||
+                typeName.Name == FullName.BSTR.Name ||
+                typeName.Name == FullName.HSTRING.Name;
         }
 
         protected virtual bool IsArrayType(FullName typeName)
         {
             ArgumentNullException.ThrowIfNull(typeName);
-            return typeName == FullName.PWSTR ||
-                typeName == FullName.PSTR ||
-                typeName == FullName.BSTR;
+            return typeName.Name == FullName.PWSTR.Name ||
+                typeName.Name == FullName.PSTR.Name ||
+                typeName.Name == FullName.BSTR.Name;
         }
 
         protected virtual bool IsImplicitInOut(FullName typeName)
         {
             ArgumentNullException.ThrowIfNull(typeName);
-            return typeName == FullName.PWSTR ||
-                typeName == FullName.PSTR ||
-                typeName == FullName.BSTR;
+            return typeName.Name == FullName.PWSTR.Name ||
+                typeName.Name == FullName.PSTR.Name ||
+                typeName.Name == FullName.BSTR.Name;
         }
 
         protected virtual CSharpGeneratorParameter GenerateCode(
@@ -1480,7 +1480,13 @@ namespace Win32InteropBuilder.Generators
                 !IsArrayType(parameter.TypeFullName) &&
                 (def.Direction != ParameterDirection.Ref || !IsImplicitInOut(parameter.TypeFullName))) // '[In,Out] PWSTR' doesn't generate 'ref PWSTR'
             {
-                if (options.HasFlag(CSharpGeneratorParameterOptions.OutAsRef) && def.Direction == ParameterDirection.Out)
+                if (def.Direction == ParameterDirection.Ref &&
+                    parameter.TypeFullName.Indirections > 0 &&
+                    IsStringType(parameter.TypeFullName.NoPointerFullName))
+                {
+                    direction = "out ";
+                }
+                else if (options.HasFlag(CSharpGeneratorParameterOptions.OutAsRef) && def.Direction == ParameterDirection.Out)
                 {
                     direction = "ref ";
                 }
