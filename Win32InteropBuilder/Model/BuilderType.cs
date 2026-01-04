@@ -118,26 +118,26 @@ namespace Win32InteropBuilder.Model
             {
                 if (IncludedFields.Count == 0 && ExcludedFields.Count == 0)
                 {
-                    foreach (var field in Fields)
+                    foreach (var fld in Fields)
                     {
-                        yield return field;
+                        yield return fld;
                     }
                     yield break;
                 }
 
-                foreach (var field in Fields)
+                foreach (var fld in Fields)
                 {
-                    if (!field.Handle.HasValue)
+                    if (!fld.Handle.HasValue)
                     {
-                        yield return field;
+                        yield return fld;
                     }
                     else
                     {
-                        if (ExcludedFields.Contains(field.Handle.Value))
+                        if (ExcludedFields.Contains(fld.Handle.Value))
                             continue;
 
-                        if (IncludedFields.Count == 0 || IncludedFields.Contains(field.Handle.Value))
-                            yield return field;
+                        if (IncludedFields.Count == 0 || IncludedFields.Contains(fld.Handle.Value))
+                            yield return fld;
                     }
                 }
             }
