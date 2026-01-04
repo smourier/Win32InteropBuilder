@@ -9,7 +9,7 @@ using System.Runtime.InteropServices;
 
 [assembly: AssemblyTitle("Win32InteropBuilder")]
 [assembly: AssemblyProduct("Win32InteropBuilder")]
-[assembly: AssemblyCopyright("Copyright (C) 2017-2025 Simon Mourier. All rights reserved.")]
+[assembly: AssemblyCopyright("Copyright (C) 2017-2026 Simon Mourier. All rights reserved.")]
 [assembly: AssemblyDescription("Interop Code Builder for Win32")]
 [assembly: AssemblyCompany("Simon Mourier")]
 [assembly: AssemblyCulture("")]
