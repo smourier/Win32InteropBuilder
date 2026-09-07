@@ -1,0 +1,575 @@
+<Window x:Class="DesktopOrganizeMaxxing.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Desktop Organize Maxxing"
+        Width="1100" Height="750"
+        MinWidth="900" MinHeight="600"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource BgPrimaryBrush}"
+        Icon="/Assets/desktop_organiser_maxxing_logo.ico"
+        WindowStyle="None" AllowsTransparency="True"
+        ResizeMode="CanResizeWithGrip">
+
+    <Window.Resources>
+        <!-- Tab-like NavButton style -->
+        <Style x:Key="NavButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+            <Setter Property="FontFamily" Value="{DynamicResource PrimaryFont}" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Padding" Value="16,10" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bg" Background="{TemplateBinding Background}"
+                                CornerRadius="{DynamicResource MediumRadius}"
+                                Padding="{TemplateBinding Padding}" Margin="4,2">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="{DynamicResource BgHoverBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="NavButtonActive" TargetType="Button" BasedOn="{StaticResource NavButton}">
+            <Setter Property="Background" Value="{DynamicResource BgTertiaryBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <!-- TitleBar Window Control Button Styles -->
+        <Style x:Key="TitleBarBtn" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+            <Setter Property="FontFamily" Value="{DynamicResource PrimaryFont}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Width" Value="38" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="2,0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bg" Background="{TemplateBinding Background}"
+                                CornerRadius="6"
+                                Padding="0">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="{DynamicResource BgHoverBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="{DynamicResource BgTertiaryBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="TitleBarCloseBtn" TargetType="Button" BasedOn="{StaticResource TitleBarBtn}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bg" Background="{TemplateBinding Background}"
+                                CornerRadius="6"
+                                Padding="0">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="#E81123" />
+                                <Setter Property="Foreground" Value="White" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="#C4101E" />
+                                <Setter Property="Foreground" Value="White" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Border CornerRadius="12" Background="{DynamicResource BgPrimaryBrush}"
+            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+        <Grid>
+            <Grid.RowDefinitions>
+                <!-- Title bar -->
+                <RowDefinition Height="40" />
+                <!-- Content -->
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- ========== CUSTOM TITLE BAR ========== -->
+            <Border Grid.Row="0" Background="{DynamicResource BgSecondaryBrush}"
+                    CornerRadius="12,12,0,0" MouseLeftButtonDown="TitleBar_MouseDown">
+                <Grid>
+                    <StackPanel Orientation="Horizontal" Margin="16,0" VerticalAlignment="Center">
+                        <Image Source="/Assets/desktop_organiser_maxxing_logo-removebg-preview.png" Width="24" Height="24" Margin="0,0,10,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality" />
+                        <TextBlock Text="Desktop Organize Maxxing" FontSize="13" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,8,0" VerticalAlignment="Center">
+                        <Button Content="─" Click="Minimize_Click"
+                                Style="{StaticResource TitleBarBtn}" FontSize="13" />
+                        <Button Content="□" Click="Maximize_Click"
+                                Style="{StaticResource TitleBarBtn}" FontSize="13" />
+                        <Button x:Name="CloseButton" Content="✕" Click="Close_Click"
+                                Style="{StaticResource TitleBarCloseBtn}" FontSize="12" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- ========== MAIN CONTENT AREA ========== -->
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <!-- Sidebar Navigation -->
+                    <ColumnDefinition Width="220" />
+                    <!-- Content -->
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- ========== SIDEBAR ========== -->
+                <Border Grid.Column="0" Background="{DynamicResource BgSecondaryBrush}"
+                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0">
+                    <DockPanel>
+                        <!-- App info at bottom -->
+                        <StackPanel DockPanel.Dock="Bottom" Margin="16,0,16,16">
+                            <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,0,0,12" />
+                            <TextBlock Text="v1.0.0" Style="{DynamicResource BodyText}"
+                                       Foreground="{DynamicResource TextMutedBrush}" FontSize="11" />
+                        </StackPanel>
+
+                        <!-- Nav Buttons -->
+                        <StackPanel Margin="8,12,8,0">
+                            <!-- Sidebar Brand -->
+                            <StackPanel Orientation="Horizontal" Margin="8,4,8,14" VerticalAlignment="Center">
+                                <Image Source="/Assets/desktop_organiser_maxxing_logo-removebg-preview.png" Width="36" Height="36" Margin="0,0,12,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality" />
+                                <TextBlock Text="DOMaxxing" FontSize="15" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" />
+                            </StackPanel>
+
+                            <TextBlock x:Name="SidebarSetupHeader" Text="SETUP" FontSize="11" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextMutedBrush}" Margin="16,0,0,8" />
+                            <Button x:Name="NavWelcome" Content="🏠  Welcome" Click="NavWelcome_Click"
+                                    Style="{StaticResource NavButtonActive}" />
+                            <Button x:Name="NavCategories" Content="📋  Categories" Click="NavCategories_Click"
+                                    Style="{StaticResource NavButton}" />
+                            <Button x:Name="NavMode" Content="🎯  Display Mode" Click="NavMode_Click"
+                                    Style="{StaticResource NavButton}" />
+
+                            <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="12,12" />
+
+                            <TextBlock x:Name="SidebarManageHeader" Text="MANAGE" FontSize="11" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextMutedBrush}" Margin="16,0,0,8" />
+                            <Button x:Name="NavLayouts" Content="💾  Saved Layouts" Click="NavLayouts_Click"
+                                    Style="{StaticResource NavButton}" />
+                            <Button x:Name="NavFences" Content="🔲  Fence Editor" Click="NavFences_Click"
+                                    Style="{StaticResource NavButton}" />
+                            <Button x:Name="NavPortals" Content="📂  Folder Portals" Click="NavPortals_Click"
+                                    Style="{StaticResource NavButton}" />
+
+                            <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="12,12" />
+
+                            <TextBlock x:Name="SidebarSettingsHeader" Text="SETTINGS" FontSize="11" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextMutedBrush}" Margin="16,0,0,8" />
+                            <Button x:Name="NavSettings" Content="⚙️  Settings" Click="NavSettings_Click"
+                                    Style="{StaticResource NavButton}" />
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
+
+                <!-- ========== CONTENT PAGES ========== -->
+                <Grid Grid.Column="1" Margin="0">
+                    <!-- Welcome / Scan Page -->
+                    <Grid x:Name="PageWelcome" Visibility="Visible">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="32">
+                            <StackPanel MaxWidth="700">
+                                <!-- Header with Logo -->
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,24" VerticalAlignment="Center">
+                                    <Image Source="/Assets/desktop_organiser_maxxing_logo-removebg-preview.png" Width="80" Height="80" Margin="0,0,22,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality" />
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock x:Name="WelcomeTitle" Text="Welcome to Desktop Organize Maxxing" Style="{DynamicResource H1}" Margin="0,0,0,4" />
+                                        <TextBlock x:Name="WelcomeSubtitle" Style="{DynamicResource BodyText}"
+                                                   Text="Intelligently organize your desktop icons into clean categories. Choose automatic detection or create your own." />
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- Scan Card -->
+                                <Border Style="{DynamicResource CardPanel}" Margin="0,0,0,20">
+                                    <StackPanel>
+                                        <TextBlock x:Name="WelcomeScanTitle" Text="📡  Desktop Scan" Style="{DynamicResource H2}" Margin="0,0,0,8" />
+                                        <TextBlock x:Name="ScanStatus" Style="{DynamicResource BodyText}" Margin="0,0,0,16"
+                                                   Text="Click scan to detect all icons on your desktop." />
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button x:Name="WelcomeScanBtn" Content="🔍  Scan Desktop" Style="{DynamicResource ModernButton}"
+                                                    Click="ScanDesktop_Click" Margin="0,0,12,0" />
+                                            <Button x:Name="WelcomeRescanBtn" Content="Rescan" Style="{DynamicResource SecondaryButton}"
+                                                    Click="ScanDesktop_Click" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Categorization Mode -->
+                                <Border Style="{DynamicResource CardPanel}" Margin="0,0,0,20">
+                                    <StackPanel>
+                                        <TextBlock x:Name="WelcomeCatModeTitle" Text="🧠  Categorization Mode" Style="{DynamicResource H2}" Margin="0,0,0,16" />
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="16" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Auto mode card -->
+                                            <Border x:Name="AutoModeCard" Grid.Column="0" CornerRadius="10"
+                                                    Background="{DynamicResource BgTertiaryBrush}"
+                                                    BorderBrush="{DynamicResource PrimaryBrush}" BorderThickness="2"
+                                                    Padding="16" Cursor="Hand" MouseLeftButtonDown="AutoMode_Click">
+                                                <StackPanel>
+                                                    <TextBlock x:Name="WelcomeAutoTitle" Text="⚡ Automatic" Style="{DynamicResource H3}" Margin="0,0,0,8" />
+                                                    <TextBlock x:Name="WelcomeAutoDesc" Style="{DynamicResource BodyText}" FontSize="13"
+                                                               Text="Let the app detect categories automatically based on file type, name, and known applications." />
+                                                </StackPanel>
+                                            </Border>
+
+                                            <!-- Manual mode card -->
+                                            <Border x:Name="ManualModeCard" Grid.Column="2" CornerRadius="10"
+                                                    Background="{DynamicResource BgTertiaryBrush}"
+                                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="2"
+                                                    Padding="16" Cursor="Hand" MouseLeftButtonDown="ManualMode_Click">
+                                                <StackPanel>
+                                                    <TextBlock x:Name="WelcomeManualTitle" Text="✋ Manual" Style="{DynamicResource H3}" Margin="0,0,0,8" />
+                                                    <TextBlock x:Name="WelcomeManualDesc" Style="{DynamicResource BodyText}" FontSize="13"
+                                                               Text="Create your own categories and assign each item to the category of your choice." />
+                                                </StackPanel>
+                                            </Border>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Quick Apply -->
+                                <Border Style="{DynamicResource CardPanel}">
+                                    <StackPanel>
+                                        <TextBlock x:Name="WelcomeQuickApplyTitle" Text="🚀  Quick Apply" Style="{DynamicResource H2}" Margin="0,0,0,8" />
+                                        <TextBlock x:Name="WelcomeQuickApplyDesc" Style="{DynamicResource BodyText}" Margin="0,0,0,16"
+                                                   Text="Scan → Auto-Categorize → Apply to desktop in one click." />
+                                        <Button x:Name="WelcomeQuickApplyBtn" Content="⚡ Auto-Organize Now" Style="{DynamicResource ModernButton}"
+                                                Click="QuickApply_Click" />
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
+
+                    <!-- Categories Page -->
+                    <Grid x:Name="PageCategories" Visibility="Collapsed">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+
+                        <!-- Header -->
+                        <StackPanel Margin="32,24,32,0">
+                            <TextBlock x:Name="CategoriesTitle" Text="Categories" Style="{DynamicResource H1}" Margin="0,0,0,8" />
+                            <TextBlock x:Name="CategoriesSubtitle" Style="{DynamicResource BodyText}" Text="Manage categories and assign desktop items to them." Margin="0,0,0,16" />
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                                <Button x:Name="AddCategoryBtn" Content="➕ Add Category" Style="{DynamicResource ModernButton}"
+                                        Click="AddCategory_Click" Margin="0,0,8,0" />
+                                <Button x:Name="AutoCategorizeBtn" Content="🔄 Auto-Categorize" Style="{DynamicResource SecondaryButton}"
+                                        Click="AutoCategorize_Click" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Category Grid -->
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="32,0,32,32">
+                            <ItemsControl x:Name="CategoryList">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Grid>
+
+                    <!-- Mode Selection Page -->
+                    <Grid x:Name="PageMode" Visibility="Collapsed">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="32">
+                            <StackPanel MaxWidth="700">
+                                <TextBlock x:Name="ModeTitle" Text="Display Mode" Style="{DynamicResource H1}" Margin="0,0,0,8" />
+                                <TextBlock x:Name="ModeSubtitle" Style="{DynamicResource BodyText}" Margin="0,0,0,32"
+                                           Text="Choose how your organized icons are displayed on the desktop." />
+
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="20" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Mode 1 Card -->
+                                    <Border x:Name="Mode1Card" Grid.Column="0" CornerRadius="12"
+                                            Background="{DynamicResource BgCardBrush}"
+                                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="2"
+                                            Padding="24" Cursor="Hand" MouseLeftButtonDown="SelectMode1_Click">
+                                        <StackPanel>
+                                            <TextBlock Text="📐" FontSize="40" Margin="0,0,0,12" />
+                                            <TextBlock x:Name="Mode1Title" Text="Simple Organize" Style="{DynamicResource H2}" Margin="0,0,0,8" />
+                                            <TextBlock x:Name="Mode1Desc" Style="{DynamicResource BodyText}" FontSize="13"
+                                                       Text="Repositions your native desktop icons by category. No visual overlays — just clean icon arrangement." />
+                                            <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,16" />
+                                            <TextBlock Style="{DynamicResource BodyText}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}">
+                                                <Run x:Name="Mode1Bullet1" Text="✓ Lightweight" /><LineBreak />
+                                                <Run x:Name="Mode1Bullet2" Text="✓ No extra processes" /><LineBreak />
+                                                <Run x:Name="Mode1Bullet3" Text="✓ Save &amp; restore layouts" />
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Mode 2 Card -->
+                                    <Border x:Name="Mode2Card" Grid.Column="2" CornerRadius="12"
+                                            Background="{DynamicResource BgCardBrush}"
+                                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="2"
+                                            Padding="24" Cursor="Hand" MouseLeftButtonDown="SelectMode2_Click">
+                                        <StackPanel>
+                                            <TextBlock Text="🔲" FontSize="40" Margin="0,0,0,12" />
+                                            <TextBlock x:Name="Mode2Title" Text="Fences Mode" Style="{DynamicResource H2}" Margin="0,0,0,8" />
+                                            <TextBlock x:Name="Mode2Desc" Style="{DynamicResource BodyText}" FontSize="13"
+                                                       Text="Creates visual fence panels on your desktop. Full customization of colors, shapes, transparency, and effects." />
+                                            <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,16" />
+                                            <TextBlock Style="{DynamicResource BodyText}" FontSize="12" Foreground="{DynamicResource TextMutedBrush}">
+                                                <Run x:Name="Mode2Bullet1" Text="✓ Custom shapes &amp; colors" /><LineBreak />
+                                                <Run x:Name="Mode2Bullet2" Text="✓ Chameleon hover effect" /><LineBreak />
+                                                <Run x:Name="Mode2Bullet3" Text="✓ Roll-up &amp; hide on double-click" /><LineBreak />
+                                                <Run x:Name="Mode2Bullet4" Text="✓ Folder Portals" />
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+
+                                <Button x:Name="ApplyModeBtn" Content="✅ Apply Selected Mode" Style="{DynamicResource ModernButton}"
+                                        Click="ApplyMode_Click" Margin="0,32,0,0" HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
+
+                    <!-- Layouts Page -->
+                    <Grid x:Name="PageLayouts" Visibility="Collapsed">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="32">
+                            <StackPanel MaxWidth="700">
+                                <TextBlock x:Name="LayoutsTitle" Text="Saved Layouts" Style="{DynamicResource H1}" Margin="0,0,0,8" />
+                                <TextBlock x:Name="LayoutsSubtitle" Style="{DynamicResource BodyText}" Margin="0,0,0,20"
+                                           Text="Save your current arrangement and restore it later. New or removed icons are handled automatically." />
+
+                                <!-- Save current layout -->
+                                <Border Style="{DynamicResource CardPanel}" Margin="0,0,0,20">
+                                    <StackPanel>
+                                        <TextBlock x:Name="SaveLayoutHeader" Text="💾 Save Current Layout" Style="{DynamicResource H3}" Margin="0,0,0,12" />
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox x:Name="LayoutNameBox" Grid.Column="0"
+                                                     Style="{DynamicResource ModernTextBox}"
+                                                     Text="My Layout" Margin="0,0,12,0" />
+                                            <Button x:Name="SaveLayoutBtn" Grid.Column="1" Content="Save" Style="{DynamicResource ModernButton}"
+                                                    Click="SaveLayout_Click" />
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Saved layouts list -->
+                                <ItemsControl x:Name="LayoutList" />
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
+
+                    <!-- Fence Editor Page -->
+                    <Grid x:Name="PageFences" Visibility="Collapsed">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="32">
+                            <StackPanel MaxWidth="800">
+                                <TextBlock x:Name="FenceEditorTitle" Text="Fence Editor" Style="{DynamicResource H1}" Margin="0,0,0,8" />
+                                <TextBlock x:Name="FenceEditorSubtitle" Style="{DynamicResource BodyText}" Margin="0,0,0,20"
+                                           Text="Customize the appearance of each fence panel." />
+                                <ItemsControl x:Name="FenceEditorList" />
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
+
+                    <!-- Folder Portals Page -->
+                    <Grid x:Name="PagePortals" Visibility="Collapsed">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="32">
+                            <StackPanel MaxWidth="700">
+                                <TextBlock x:Name="PortalsTitle" Text="Folder Portals" Style="{DynamicResource H1}" Margin="0,0,0,8" />
+                                <TextBlock x:Name="PortalsSubtitle" Style="{DynamicResource BodyText}" Margin="0,0,0,20"
+                                           Text="Create portals to browse folder contents directly on your desktop without opening File Explorer." />
+                                <Button x:Name="AddPortalBtn" Content="➕ Add Folder Portal" Style="{DynamicResource ModernButton}"
+                                        Click="AddPortal_Click" Margin="0,0,0,20" />
+                                <ItemsControl x:Name="PortalList" />
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
+
+                    <!-- Settings Page -->
+                    <Grid x:Name="PageSettings" Visibility="Collapsed">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="32">
+                            <StackPanel MaxWidth="600">
+                                <TextBlock x:Name="SettingsTitle" Text="Settings" Style="{DynamicResource H1}" Margin="0,0,0,24" />
+
+                                <!-- Language -->
+                                <Border Style="{DynamicResource CardPanel}" Margin="0,0,0,16">
+                                    <StackPanel>
+                                        <TextBlock x:Name="SettingsLangTitle" Text="🌐 Language" Style="{DynamicResource H3}" Margin="0,0,0,12" />
+                                        <StackPanel Orientation="Horizontal">
+                                            <RadioButton x:Name="LangEnglish" Content="English" GroupName="Language"
+                                                         Foreground="{DynamicResource TextPrimaryBrush}"
+                                                         IsChecked="True" Margin="0,0,24,0" Click="LanguageChanged" />
+                                            <RadioButton x:Name="LangFrench" Content="Français" GroupName="Language"
+                                                         Foreground="{DynamicResource TextPrimaryBrush}"
+                                                         Margin="0,0,24,0" Click="LanguageChanged" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Theme -->
+                                <Border Style="{DynamicResource CardPanel}" Margin="0,0,0,16">
+                                    <StackPanel>
+                                        <TextBlock x:Name="SettingsThemeTitle" Text="🎨 Theme" Style="{DynamicResource H3}" Margin="0,0,0,12" />
+                                        <StackPanel Orientation="Horizontal">
+                                            <RadioButton x:Name="ThemeAuto" Content="Auto" GroupName="Theme"
+                                                         Foreground="{DynamicResource TextPrimaryBrush}"
+                                                         IsChecked="True" Margin="0,0,20,0" Click="ThemeChanged" />
+                                            <RadioButton x:Name="ThemeDark" Content="Dark" GroupName="Theme"
+                                                         Foreground="{DynamicResource TextPrimaryBrush}"
+                                                         Margin="0,0,20,0" Click="ThemeChanged" />
+                                            <RadioButton x:Name="ThemeLight" Content="Light" GroupName="Theme"
+                                                         Foreground="{DynamicResource TextPrimaryBrush}"
+                                                         Click="ThemeChanged" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Startup -->
+                                <Border Style="{DynamicResource CardPanel}" Margin="0,0,0,16">
+                                    <StackPanel>
+                                        <TextBlock x:Name="SettingsStartupTitle" Text="🚀 Startup" Style="{DynamicResource H3}" Margin="0,0,0,12" />
+                                        <CheckBox x:Name="StartupToggle" Style="{DynamicResource ToggleSwitch}"
+                                                  Content="Run at Windows startup" IsChecked="True"
+                                                  Click="StartupToggle_Click" />
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Auto-detect new desktop items -->
+                                <Border Style="{DynamicResource CardPanel}" Margin="0,0,0,16">
+                                    <StackPanel>
+                                        <TextBlock x:Name="SettingsNewItemTitle" Text="✨ New Desktop Items" Style="{DynamicResource H3}" Margin="0,0,0,12" />
+                                        <CheckBox x:Name="PromptOnNewItemToggle" Style="{DynamicResource ToggleSwitch}"
+                                                  Content="Open app to organize new desktop apps/files"
+                                                  IsChecked="True" Click="PromptOnNewItemToggle_Click" />
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- About -->
+                                <Border Style="{DynamicResource CardPanel}">
+                                    <StackPanel>
+                                        <TextBlock x:Name="SettingsAboutTitle" Text="ℹ️ About" Style="{DynamicResource H3}" Margin="0,0,0,8" />
+                                        <TextBlock Style="{DynamicResource BodyText}" LineHeight="20">
+                                            <Run Text="Desktop Organize Maxxing v1.0" FontWeight="Bold" /><LineBreak />
+                                            <Run x:Name="SettingsAboutAuthor" Text="Created by Igrek" Foreground="{DynamicResource PrimaryBrush}" FontWeight="SemiBold" /><LineBreak />
+                                            <Run x:Name="SettingsAboutQuote" Text="« organize your desktop to ascend and lower your cortisol and stop crymaxx »" FontStyle="Italic" Foreground="{DynamicResource TextSecondaryBrush}" /><LineBreak /><LineBreak />
+                                            <Run x:Name="SettingsAboutDesc" Text="Intelligent desktop icon organization." /><LineBreak />
+                                            <Run Text="Made with ❤️" />
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
+
+                </Grid>
+            </Grid>
+
+            <!-- ========== NEW ITEM DETECTED MODAL OVERLAY ========== -->
+            <Grid x:Name="NewItemOverlay" Grid.RowSpan="2" Visibility="Collapsed" Background="#C00B0E14">
+                <Border Width="500" VerticalAlignment="Center" HorizontalAlignment="Center"
+                        Background="{DynamicResource BgSecondaryBrush}"
+                        BorderBrush="{DynamicResource PrimaryBrush}" BorderThickness="1.5"
+                        CornerRadius="16" Padding="28">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="30" ShadowDepth="6" Opacity="0.5" Color="Black" />
+                    </Border.Effect>
+                    <StackPanel>
+                        <!-- Header -->
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,18" VerticalAlignment="Center">
+                            <Border Width="40" Height="40" CornerRadius="10" Background="{DynamicResource PrimaryBrush}" Margin="0,0,14,0">
+                                <TextBlock Text="✨" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock x:Name="NewItemTitle" Text="New shortcut or app detected" FontSize="16" FontWeight="Bold"
+                                           Foreground="{DynamicResource TextPrimaryBrush}" />
+                                <TextBlock x:Name="NewItemSubtitle" Text="Choose which Fence or category to place it in:" FontSize="12"
+                                           Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,3,0,0" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Item Preview Card -->
+                        <Border Background="{DynamicResource BgTertiaryBrush}" CornerRadius="10" Padding="14" Margin="0,0,0,18">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="48" Height="48" CornerRadius="8" Background="{DynamicResource BgPrimaryBrush}" Margin="0,0,14,0">
+                                    <Image x:Name="NewItemIcon" Width="36" Height="36" RenderOptions.BitmapScalingMode="HighQuality" />
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock x:Name="NewItemName" Text="Application" FontSize="14" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock x:Name="NewItemPath" Text="C:\..." FontSize="11"
+                                               Foreground="{DynamicResource TextMutedBrush}" TextTrimming="CharacterEllipsis" Margin="0,3,0,0" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <!-- Choose Category -->
+                        <TextBlock x:Name="NewItemDestinationLabel" Text="📁 Destination (Fence / Category):" FontSize="12" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,8" />
+                        <ComboBox x:Name="NewItemCategoryCombo" Height="38" Margin="0,0,0,22"
+                                  Background="{DynamicResource BgTertiaryBrush}"
+                                  Foreground="{DynamicResource TextPrimaryBrush}"
+                                  FontSize="13" VerticalContentAlignment="Center" Padding="8,4" />
+
+                        <!-- Action buttons -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="14" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Button x:Name="NewItemDismissBtn" Grid.Column="0" Content="Keep as is"
+                                    Style="{DynamicResource SecondaryButton}" Height="38" Click="NewItemDismiss_Click" />
+                            <Button x:Name="NewItemAssignBtn" Grid.Column="2" Content="Place in Category"
+                                    Style="{DynamicResource ModernButton}" Height="38" Click="NewItemAssign_Click" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

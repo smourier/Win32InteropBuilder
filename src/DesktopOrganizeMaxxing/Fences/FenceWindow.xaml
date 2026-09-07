@@ -1,0 +1,100 @@
+<Window x:Class="DesktopOrganizeMaxxing.Fences.FenceWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ShowInTaskbar="False"
+        Topmost="False"
+        ShowActivated="False"
+        Focusable="False"
+        AllowDrop="True"
+        ResizeMode="NoResize"
+        Loaded="Window_Loaded"
+        MouseEnter="Window_MouseEnter"
+        MouseLeave="Window_MouseLeave"
+        DragOver="Fence_DragOver"
+        Drop="Fence_Drop">
+
+    <Grid x:Name="RootGrid" Margin="4">
+        <!-- Main Fence Border -->
+        <Border x:Name="FenceBorder" CornerRadius="12"
+                MouseRightButtonDown="FenceBorder_RightClick"
+                AllowDrop="True"
+                DragOver="Fence_DragOver"
+                Drop="Fence_Drop">
+            <Border.Background>
+                <SolidColorBrush x:Name="FenceBackground" Color="#1E1E2E" Opacity="0.75" />
+            </Border.Background>
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="12" ShadowDepth="2" Opacity="0.25" Color="Black" />
+            </Border.Effect>
+
+            <Grid x:Name="MainLayoutGrid">
+                <Grid.RowDefinitions>
+                    <!-- Row 0: Top title bar (in horizontal mode) -->
+                    <RowDefinition x:Name="RowTopTitle" Height="38" />
+                    <!-- Row 1: Content row -->
+                    <RowDefinition x:Name="ContentRow" Height="*" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <!-- Col 0: Main content or Left Title Bar -->
+                    <ColumnDefinition x:Name="Col0" Width="*" />
+                    <!-- Col 1: Right Title Bar (Vertical Docked Right) -->
+                    <ColumnDefinition x:Name="Col1" Width="0" />
+                </Grid.ColumnDefinitions>
+
+                <!-- ========== TITLE BAR / TABS ========== -->
+                <Border Grid.Row="0" Grid.Column="0" x:Name="TitleBar" CornerRadius="12,12,0,0"
+                        MouseLeftButtonDown="TitleBar_MouseDown"
+                        Background="Transparent">
+                    <Grid>
+                        <Border x:Name="TitleBarBg" CornerRadius="12,12,0,0">
+                            <Border.Background>
+                                <SolidColorBrush x:Name="TitleBarBackground" Color="#2D2D3F" Opacity="0.9" />
+                            </Border.Background>
+                        </Border>
+
+                        <Grid x:Name="TitleBarContentGrid" Margin="6,0,6,0">
+                            <!-- Tabs ScrollViewer -->
+                            <ScrollViewer x:Name="TabsScroller"
+                                          HorizontalScrollBarVisibility="Auto"
+                                          VerticalScrollBarVisibility="Disabled"
+                                          Focusable="False"
+                                          Margin="0,0,32,0">
+                                <StackPanel x:Name="TabsPanel" Orientation="Horizontal" VerticalAlignment="Center" />
+                            </ScrollViewer>
+
+                            <!-- Roll-up button -->
+                            <Button x:Name="RollUpBtn" Content="▲" FontSize="11"
+                                    Width="26" Height="26" Cursor="Hand"
+                                    HorizontalAlignment="Right" VerticalAlignment="Center"
+                                    Click="RollUp_Click"
+                                    Background="Transparent" Foreground="#A0A0B0"
+                                    BorderThickness="0" />
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <!-- ========== CONTENT AREA ========== -->
+                <ScrollViewer Grid.Row="1" Grid.Column="0" x:Name="ContentScroller"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled"
+                              Margin="8,4,8,8">
+                    <WrapPanel x:Name="IconsPanel" Orientation="Horizontal" />
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <!-- Resize Edge & Corner Hitboxes (8 directions with native cursors) -->
+        <Border x:Name="ResizeTop" Height="7" VerticalAlignment="Top" Background="Transparent" Cursor="SizeNS" PreviewMouseLeftButtonDown="Resize_MouseDown" Tag="3" Margin="8,0,8,0" />
+        <Border x:Name="ResizeBottom" Height="7" VerticalAlignment="Bottom" Background="Transparent" Cursor="SizeNS" PreviewMouseLeftButtonDown="Resize_MouseDown" Tag="6" Margin="8,0,8,0" />
+        <Border x:Name="ResizeLeft" Width="7" HorizontalAlignment="Left" Background="Transparent" Cursor="SizeWE" PreviewMouseLeftButtonDown="Resize_MouseDown" Tag="1" Margin="0,8,0,8" />
+        <Border x:Name="ResizeRight" Width="7" HorizontalAlignment="Right" Background="Transparent" Cursor="SizeWE" PreviewMouseLeftButtonDown="Resize_MouseDown" Tag="2" Margin="0,8,0,8" />
+
+        <Border x:Name="ResizeTopLeft" Width="12" Height="12" HorizontalAlignment="Left" VerticalAlignment="Top" Background="Transparent" Cursor="SizeNWSE" PreviewMouseLeftButtonDown="Resize_MouseDown" Tag="4" />
+        <Border x:Name="ResizeTopRight" Width="12" Height="12" HorizontalAlignment="Right" VerticalAlignment="Top" Background="Transparent" Cursor="SizeNESW" PreviewMouseLeftButtonDown="Resize_MouseDown" Tag="5" />
+        <Border x:Name="ResizeBottomLeft" Width="12" Height="12" HorizontalAlignment="Left" VerticalAlignment="Bottom" Background="Transparent" Cursor="SizeNESW" PreviewMouseLeftButtonDown="Resize_MouseDown" Tag="7" />
+        <Border x:Name="ResizeBottomRight" Width="12" Height="12" HorizontalAlignment="Right" VerticalAlignment="Bottom" Background="Transparent" Cursor="SizeNWSE" PreviewMouseLeftButtonDown="Resize_MouseDown" Tag="8" />
+    </Grid>
+</Window>

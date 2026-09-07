@@ -1,0 +1,116 @@
+<Window x:Class="DesktopOrganizeMaxxing.Views.IconPickerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Choisir une icône"
+        Width="540" Height="580"
+        WindowStartupLocation="CenterOwner"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize">
+
+    <Border Background="#1E1E2E" CornerRadius="12" BorderBrush="#36364F" BorderThickness="1">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.4" Color="Black" />
+        </Border.Effect>
+
+        <Grid Margin="20">
+            <Grid.RowDefinitions>
+                <!-- Title bar -->
+                <RowDefinition Height="Auto" />
+                <!-- Preview -->
+                <RowDefinition Height="Auto" />
+                <!-- Icon Bank ScrollViewer -->
+                <RowDefinition Height="*" />
+                <!-- Custom File Import -->
+                <RowDefinition Height="Auto" />
+                <!-- Buttons -->
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Title bar -->
+            <Grid Grid.Row="0" Margin="0,0,0,16">
+                <TextBlock Text="🎨 Choisir une icône de catégorie" FontSize="16" FontWeight="Bold" Foreground="White" />
+                <Button Content="✕" Width="28" Height="28" HorizontalAlignment="Right"
+                        Background="Transparent" Foreground="#A0A0B0" BorderThickness="0"
+                        Cursor="Hand" FontSize="14" Click="Cancel_Click" />
+            </Grid>
+
+            <!-- Selected preview -->
+            <Border Grid.Row="1" Background="#252538" CornerRadius="10" Padding="12" Margin="0,0,0,16" BorderBrush="#36364F" BorderThickness="1">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border x:Name="PreviewContainer" Width="44" Height="44" CornerRadius="8" Background="#1E1E2E" Margin="0,0,14,0"
+                            BorderBrush="#6C63FF" BorderThickness="2" VerticalAlignment="Center">
+                        <Grid>
+                            <TextBlock x:Name="PreviewEmojiText" Text="📁" FontSize="26" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <Image x:Name="PreviewCustomImage" Width="32" Height="32" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Grid>
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="Icône sélectionnée" FontSize="11" Foreground="#A0A0B0" />
+                        <TextBlock x:Name="PreviewInfoText" Text="Emoji: 📁" FontSize="13" FontWeight="SemiBold" Foreground="White" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Icon Bank -->
+            <GroupBox Grid.Row="2" Header=" Banque d'icônes " Foreground="#C0C0D0" BorderBrush="#36364F" Margin="0,0,0,14">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="6">
+                    <WrapPanel x:Name="EmojiBankPanel" />
+                </ScrollViewer>
+            </GroupBox>
+
+            <!-- Custom File Import -->
+            <Border Grid.Row="3" Background="#252538" CornerRadius="10" Padding="12" Margin="0,0,0,16" BorderBrush="#36364F" BorderThickness="1">
+                <StackPanel>
+                    <TextBlock Text="📁 Fichier personnalisé (.ico, .png, .jpg)" FontSize="12" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,8" />
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="📂 Parcourir un fichier .ico / image..." Click="BrowseCustomIcon_Click"
+                                Background="#6C63FF" Foreground="White" Padding="12,6" Cursor="Hand"
+                                BorderThickness="0" Margin="0,0,10,0">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="6" />
+                                </Style>
+                            </Button.Resources>
+                        </Button>
+
+                        <Button x:Name="RemoveCustomBtn" Content="✖ Utiliser l'emoji" Click="RemoveCustomIcon_Click"
+                                Background="#36364F" Foreground="#A0A0B0" Padding="10,6" Cursor="Hand"
+                                BorderThickness="0" Visibility="Collapsed">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="6" />
+                                </Style>
+                            </Button.Resources>
+                        </Button>
+                    </StackPanel>
+                    <TextBlock x:Name="CustomPathText" Text="" FontSize="11" Foreground="#888899" Margin="0,6,0,0" TextTrimming="CharacterEllipsis" Visibility="Collapsed" />
+                </StackPanel>
+            </Border>
+
+            <!-- Actions -->
+            <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Annuler" Click="Cancel_Click"
+                        Background="#36364F" Foreground="#ECEFF4" Padding="16,8" Cursor="Hand"
+                        BorderThickness="0" Margin="0,0,10,0">
+                    <Button.Resources>
+                        <Style TargetType="Border">
+                            <Setter Property="CornerRadius" Value="6" />
+                        </Style>
+                    </Button.Resources>
+                </Button>
+
+                <Button Content="Valider" Click="Ok_Click"
+                        Background="#6C63FF" Foreground="White" FontWeight="SemiBold" Padding="20,8" Cursor="Hand"
+                        BorderThickness="0">
+                    <Button.Resources>
+                        <Style TargetType="Border">
+                            <Setter Property="CornerRadius" Value="6" />
+                        </Style>
+                    </Button.Resources>
+                </Button>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

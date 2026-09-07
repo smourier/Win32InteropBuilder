@@ -1,0 +1,29 @@
+## .gitignore for Desktop Organize Maxxing (.NET 9 / C#)
+
+# Build results
+[Bb]in/
+[Oo]bj/
+publish/
+
+# Visual Studio & IDE files
+.vs/
+.vscode/
+*.user
+*.userosscache
+*.suo
+*.userprefs
+*.ide/
+*.swp
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.log
+
+# Inno Setup temporary outputs
+Output/
+
+# Scratch & temporary test scripts
+scratch/
