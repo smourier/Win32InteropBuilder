@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.9.34728.123
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Win32InteropBuilder", "Win32InteropBuilder\Win32InteropBuilder.csproj", "{9E6E96CC-BF30-4CC3-8570-01EAD7EFB54C}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "InteropBuilder.Cli", "InteropBuilder.Cli\InteropBuilder.Cli.csproj", "{203AB711-F84A-430B-AE44-1EB38C386847}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{9E6E96CC-BF30-4CC3-8570-01EAD7EFB54C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9E6E96CC-BF30-4CC3-8570-01EAD7EFB54C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9E6E96CC-BF30-4CC3-8570-01EAD7EFB54C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9E6E96CC-BF30-4CC3-8570-01EAD7EFB54C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{203AB711-F84A-430B-AE44-1EB38C386847}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{203AB711-F84A-430B-AE44-1EB38C386847}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{203AB711-F84A-430B-AE44-1EB38C386847}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{203AB711-F84A-430B-AE44-1EB38C386847}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {7E89B3F3-B4B8-452A-9D1B-8BCEEA5F2095}
+	EndGlobalSection
+EndGlobal

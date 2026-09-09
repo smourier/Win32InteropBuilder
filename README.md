@@ -257,11 +257,16 @@ All user configurations, custom categories, saved layouts, and fence preferences
 %APPDATA%\DesktopOrganizeMaxxing\config.json
 ```
 
+Examples of this:
 * **Zero Cloud Sync**: Your file paths, layouts, and desktop contents never leave your machine.
 * **Portable Config**: Back up or copy `config.json` to transfer your exact desktop setup to another PC.
 
+* [DirectNAot](https://github.com/smourier/DirectNAot) which is an AOT-friendly version of [DirectN](https://github.com/smourier/DirectN) : interop Code for .NET Framework, .NET Core and .NET 5+ : DXGI, WIC, DirectX 9 to 12, Direct2D, Direct Write, Direct Composition, Media Foundation, WASAPI, CodecAPI, GDI, Spatial Audio, DVD, Windows Media Player, UWP DXInterop, WinUI3, etc)
+* [WebView2Aot](https://github.com/smourier/WebView2Aot) which is an AOT-compatible bindings dll for [WebView2](https://developer.microsoft.com/en-us/microsoft-edge/webview2?form=MA13LH) independent from WinForms or WPF.
+* [ShellN](https://github.com/smourier/ShellBat/tree/main/ShellN) interop code for the Windows Shell (IShellItem, etc.). Ships with [ShellBat](https://github.com/smourier/ShellBat) a .NET AOT one-exe file modern Windows file explorer with file viewers, multi-instance workflows, terminal integration, search capabilities, and deep Windows Shell interoperability.
 ---
 
+The key points that drive how code is generated and built:
 ## 👑 Credits & Author
 
 * **Created by**: **Igrek**
