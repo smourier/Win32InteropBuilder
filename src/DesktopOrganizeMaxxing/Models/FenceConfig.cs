@@ -112,6 +112,9 @@ public class FenceConfig
     /// <summary>Roll-up / unroll animation duration in milliseconds (e.g. 100ms ultra-fast, 200ms normal, 400ms smooth, 0ms instant).</summary>
     public int RollUpAnimationDurationMs { get; set; } = 200;
 
+    /// <summary>Whether this fence is locked (cannot be moved).</summary>
+    public bool IsLocked { get; set; } = false;
+
     /// <summary>
     /// Ensures this config has at least one tab representing itself.
     /// </summary>

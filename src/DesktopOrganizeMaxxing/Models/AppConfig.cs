@@ -40,6 +40,9 @@ public class AppConfig
 
     /// <summary>Whether the initial setup wizard has been completed.</summary>
     public bool SetupCompleted { get; set; } = false;
+
+    /// <summary>Whether fences should automatically avoid overlapping when moved.</summary>
+    public bool PreventFenceOverlap { get; set; } = true;
 }
 
 /// <summary>

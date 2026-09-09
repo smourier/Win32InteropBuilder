@@ -248,6 +248,100 @@ public class FenceManager : IDisposable
     }
 
     /// <summary>
+    /// Attempts to resolve overlapping fences by nudging the moved window away from others.
+    /// This is a simple strategy: for each overlapping fence, try shifting the moved window
+    /// right, left, down or up until no intersection or until attempts exhausted.
+    /// </summary>
+    public void ResolveOverlap(FenceWindow movedWindow)
+    {
+        if (movedWindow == null) return;
+        if (!App.Config.PreventFenceOverlap) return;
+
+        var workArea = movedWindow.GetCurrentWorkArea();
+
+        Rect movedRect = new Rect(movedWindow.Left, movedWindow.Top,
+            movedWindow.ActualWidth > 0 ? movedWindow.ActualWidth : movedWindow.Width,
+            movedWindow.ActualHeight > 0 ? movedWindow.ActualHeight : movedWindow.Height);
+        // Improved strategy: search outward in a spiral for the nearest free position
+        // that does not intersect any other fence and stays within the work area.
+        var occupied = new List<Rect>();
+        foreach (var other in _fenceWindows)
+        {
+            if (other == movedWindow) continue;
+            var r = new Rect(other.Left, other.Top,
+                other.ActualWidth > 0 ? other.ActualWidth : other.Width,
+                other.ActualHeight > 0 ? other.ActualHeight : other.Height);
+            occupied.Add(r);
+        }
+
+        bool IsFreeAt(double x, double y)
+        {
+            var candidate = new Rect(x, y, movedRect.Width, movedRect.Height);
+            // must be inside work area
+            if (candidate.Left < workArea.Left || candidate.Top < workArea.Top) return false;
+            if (candidate.Right > workArea.Right || candidate.Bottom > workArea.Bottom) return false;
+            foreach (var o in occupied)
+            {
+                if (candidate.IntersectsWith(o)) return false;
+            }
+            return true;
+        }
+
+        // If original position is already free (except self), nothing to do
+        if (IsFreeAt(movedRect.X, movedRect.Y)) return;
+
+        var original = new Point(movedRect.X, movedRect.Y);
+        Point? best = null;
+        double bestDistSq = double.MaxValue;
+
+        const double step = 20.0; // pixel sampling step
+        const double maxRadius = 600.0; // search radius
+
+        // check increasing radii and several angles to find closest free spot
+        for (double r = step; r <= maxRadius; r += step)
+        {
+            for (double deg = 0; deg < 360; deg += 22.5)
+            {
+                double rad = deg * Math.PI / 180.0;
+                double nx = original.X + Math.Cos(rad) * r;
+                double ny = original.Y + Math.Sin(rad) * r;
+
+                // round to integer to avoid micro offsets
+                nx = Math.Round(nx);
+                ny = Math.Round(ny);
+
+                if (!IsFreeAt(nx, ny)) continue;
+
+                double dx = nx - original.X;
+                double dy = ny - original.Y;
+                double distSq = dx * dx + dy * dy;
+                if (distSq < bestDistSq)
+                {
+                    bestDistSq = distSq;
+                    best = new Point(nx, ny);
+                }
+            }
+
+            // if we found a candidate at this radius, stop searching further (nearest found)
+            if (best.HasValue) break;
+        }
+
+        if (best.HasValue)
+        {
+            var target = best.Value;
+            movedWindow.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                movedWindow.Left = target.X;
+                movedWindow.Top = target.Y;
+                movedWindow.SnapToEdges();
+                movedWindow.Config.X = movedWindow.Left;
+                movedWindow.Config.Y = movedWindow.Top;
+                App.ConfigManager.SaveConfig(App.Config);
+            }));
+        }
+    }
+
+    /// <summary>
     /// Toggles desktop visibility on desktop double-click:
     /// - In Simple Mode: Toggles native desktop icons AND folder portals (clean wallpaper toggle).
     /// - In Fences Mode: Toggles category fences AND folder portals.

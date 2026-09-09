@@ -71,6 +71,44 @@ public partial class FenceWindow : Window
         }
     }
 
+    // Toggle global prevent-overlap setting
+    private void OverlapToggle_Click(object sender, RoutedEventArgs e)
+    {
+        App.Config.PreventFenceOverlap = !App.Config.PreventFenceOverlap;
+        App.ConfigManager.SaveConfig(App.Config);
+        // Update button visual
+        if (OverlapToggleBtn != null)
+        {
+            OverlapToggleBtn.Opacity = App.Config.PreventFenceOverlap ? 1.0 : 0.5;
+            OverlapToggleBtn.ToolTip = App.Config.PreventFenceOverlap ? "Prevent overlapping: ON" : "Prevent overlapping: OFF";
+        }
+    }
+
+    // Lock/unlock this fence to prevent moving
+    private void LockBtn_Click(object sender, RoutedEventArgs e)
+    {
+        _config.IsLocked = !_config.IsLocked;
+        App.ConfigManager.SaveConfig(App.Config);
+        UpdateLockButtonVisual();
+    }
+
+    private void UpdateLockButtonVisual()
+    {
+        if (LockBtn == null) return;
+        if (_config.IsLocked)
+        {
+            LockBtn.Content = "\uD83D\uDD12"; // locked padlock
+            LockBtn.ToolTip = "Fence locked (cannot move)";
+            LockBtn.Opacity = 0.9;
+        }
+        else
+        {
+            LockBtn.Content = "\uD83D\uDD13"; // unlocked
+            LockBtn.ToolTip = "Fence unlocked (can move)";
+            LockBtn.Opacity = 0.6;
+        }
+    }
+
     public FenceWindow(FenceConfig config, List<DesktopItem> allItems, List<Category>? categories = null, FenceManager? manager = null)
     {
         InitializeComponent();
@@ -255,6 +293,19 @@ public partial class FenceWindow : Window
 
         // Keep pinned at bottom of desktop Z-order
         SetDesktopPosition();
+
+        // Initialize control visuals for overlap and lock buttons
+        try
+        {
+            if (OverlapToggleBtn != null)
+            {
+                OverlapToggleBtn.Opacity = App.Config.PreventFenceOverlap ? 1.0 : 0.5;
+                OverlapToggleBtn.ToolTip = App.Config.PreventFenceOverlap ? "Prevent overlapping: ON" : "Prevent overlapping: OFF";
+            }
+
+            UpdateLockButtonVisual();
+        }
+        catch { }
     }
 
     /// <summary>
@@ -1554,8 +1605,17 @@ public partial class FenceWindow : Window
         {
             try
             {
+                // If the fence is locked, prevent moving
+                if (_config.IsLocked) return;
+
                 DragMove();
                 SnapToEdges();
+
+                // If global prevent-overlap is enabled, ask manager to resolve overlaps
+                if (App.Config.PreventFenceOverlap)
+                {
+                    _manager?.ResolveOverlap(this);
+                }
             }
             catch { }
         }
