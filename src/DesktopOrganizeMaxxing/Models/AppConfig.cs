@@ -43,6 +43,12 @@ public class AppConfig
 
     /// <summary>Whether fences should automatically avoid overlapping when moved.</summary>
     public bool PreventFenceOverlap { get; set; } = true;
+
+    /// <summary>Overlap search sampling step in pixels (used when preventing fence overlap).</summary>
+    public int OverlapSearchStep { get; set; } = 5;
+
+    /// <summary>Maximum search radius in pixels when resolving overlap.</summary>
+    public int OverlapSearchMaxRadius { get; set; } = 600;
 }
 
 /// <summary>

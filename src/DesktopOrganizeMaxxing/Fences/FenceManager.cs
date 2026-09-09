@@ -294,8 +294,8 @@ public class FenceManager : IDisposable
         Point? best = null;
         double bestDistSq = double.MaxValue;
 
-        const double step = 20.0; // pixel sampling step
-        const double maxRadius = 600.0; // search radius
+        double step = App.Config.OverlapSearchStep > 0 ? App.Config.OverlapSearchStep : 5.0;
+        double maxRadius = App.Config.OverlapSearchMaxRadius > 0 ? App.Config.OverlapSearchMaxRadius : 600.0;
 
         // check increasing radii and several angles to find closest free spot
         for (double r = step; r <= maxRadius; r += step)

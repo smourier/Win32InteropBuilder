@@ -1276,6 +1276,46 @@ public partial class MainWindow : Window
             speedPanel.Children.Add(speedLabel);
             stack.Children.Add(speedPanel);
 
+            // Overlap search step slider (global)
+            var stepPanel = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 10) };
+            stepPanel.Children.Add(new TextBlock
+            {
+                Text = isEn ? "🔎 Overlap step: " : "🔎 Pas de recherche d\'overlap : ",
+                Style = (Style)FindResource("BodyText"),
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 8, 0)
+            });
+
+            var stepSlider = new Slider
+            {
+                Minimum = 1,
+                Maximum = 40,
+                Value = App.Config.OverlapSearchStep,
+                Width = 160,
+                TickFrequency = 1,
+                IsSnapToTickEnabled = true,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            var stepLabel = new TextBlock
+            {
+                Text = $"{App.Config.OverlapSearchStep} px",
+                Style = (Style)FindResource("BodyText"),
+                FontWeight = FontWeights.SemiBold,
+                Margin = new Thickness(10, 0, 0, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+                Width = 130
+            };
+            stepSlider.ValueChanged += (_, _) =>
+            {
+                int val = (int)stepSlider.Value;
+                App.Config.OverlapSearchStep = val;
+                App.ConfigManager.SaveConfig(App.Config);
+                stepLabel.Text = $"{val} px";
+            };
+            stepPanel.Children.Add(stepSlider);
+            stepPanel.Children.Add(stepLabel);
+            stack.Children.Add(stepPanel);
+
             // Orientation selector
             var orientPanel = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 10) };
             orientPanel.Children.Add(new TextBlock
