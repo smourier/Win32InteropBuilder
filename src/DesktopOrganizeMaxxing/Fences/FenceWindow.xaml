@@ -17,7 +17,7 @@
         Drop="Fence_Drop">
 
     <Grid x:Name="RootGrid" Margin="4">
-        <!-- Main Fence Border -->
+        <Border x:Name="FenceBorder" CornerRadius="12" Margin="5"
         <Border x:Name="FenceBorder" CornerRadius="12"
                 MouseRightButtonDown="FenceBorder_RightClick"
                 AllowDrop="True"
@@ -87,14 +87,14 @@
         </Border>
 
         <!-- Resize Edge & Corner Hitboxes (8 directions with native cursors) -->
-        <Border x:Name="ResizeTop" Height="7" VerticalAlignment="Top" Background="Transparent" Cursor="SizeNS" PreviewMouseLeftButtonDown="Resize_MouseDown" Tag="3" Margin="8,0,8,0" />
-        <Border x:Name="ResizeBottom" Height="7" VerticalAlignment="Bottom" Background="Transparent" Cursor="SizeNS" PreviewMouseLeftButtonDown="Resize_MouseDown" Tag="6" Margin="8,0,8,0" />
-        <Border x:Name="ResizeLeft" Width="7" HorizontalAlignment="Left" Background="Transparent" Cursor="SizeWE" PreviewMouseLeftButtonDown="Resize_MouseDown" Tag="1" Margin="0,8,0,8" />
-        <Border x:Name="ResizeRight" Width="7" HorizontalAlignment="Right" Background="Transparent" Cursor="SizeWE" PreviewMouseLeftButtonDown="Resize_MouseDown" Tag="2" Margin="0,8,0,8" />
+        <Border x:Name="ResizeTop" Height="8" VerticalAlignment="Top" Background="Transparent" Cursor="SizeNS" PreviewMouseLeftButtonDown="Resize_MouseDown" Tag="3" Margin="16,0,16,0" />
+        <Border x:Name="ResizeBottom" Height="8" VerticalAlignment="Bottom" Background="Transparent" Cursor="SizeNS" PreviewMouseLeftButtonDown="Resize_MouseDown" Tag="6" Margin="16,0,16,0" />
+        <Border x:Name="ResizeLeft" Width="8" HorizontalAlignment="Left" Background="Transparent" Cursor="SizeWE" PreviewMouseLeftButtonDown="Resize_MouseDown" Tag="1" Margin="0,16,0,16" />
+        <Border x:Name="ResizeRight" Width="8" HorizontalAlignment="Right" Background="Transparent" Cursor="SizeWE" PreviewMouseLeftButtonDown="Resize_MouseDown" Tag="2" Margin="0,16,0,16" />
 
-        <Border x:Name="ResizeTopLeft" Width="12" Height="12" HorizontalAlignment="Left" VerticalAlignment="Top" Background="Transparent" Cursor="SizeNWSE" PreviewMouseLeftButtonDown="Resize_MouseDown" Tag="4" />
-        <Border x:Name="ResizeTopRight" Width="12" Height="12" HorizontalAlignment="Right" VerticalAlignment="Top" Background="Transparent" Cursor="SizeNESW" PreviewMouseLeftButtonDown="Resize_MouseDown" Tag="5" />
-        <Border x:Name="ResizeBottomLeft" Width="12" Height="12" HorizontalAlignment="Left" VerticalAlignment="Bottom" Background="Transparent" Cursor="SizeNESW" PreviewMouseLeftButtonDown="Resize_MouseDown" Tag="7" />
-        <Border x:Name="ResizeBottomRight" Width="12" Height="12" HorizontalAlignment="Right" VerticalAlignment="Bottom" Background="Transparent" Cursor="SizeNWSE" PreviewMouseLeftButtonDown="Resize_MouseDown" Tag="8" />
+        <Border x:Name="ResizeTopLeft" Width="8" Height="12" HorizontalAlignment="Left" VerticalAlignment="Top" Background="Transparent" Cursor="SizeNWSE" PreviewMouseLeftButtonDown="Resize_MouseDown" Tag="4" />
+        <Border x:Name="ResizeTopRight" Width="8" Height="12" HorizontalAlignment="Right" VerticalAlignment="Top" Background="Transparent" Cursor="SizeNESW" PreviewMouseLeftButtonDown="Resize_MouseDown" Tag="5" />
+        <Border x:Name="ResizeBottomLeft" Width="8" Height="12" HorizontalAlignment="Left" VerticalAlignment="Bottom" Background="Transparent" Cursor="SizeNESW" PreviewMouseLeftButtonDown="Resize_MouseDown" Tag="7" />
+        <Border x:Name="ResizeBottomRight" Width="8" Height="12" HorizontalAlignment="Right" VerticalAlignment="Bottom" Background="Transparent" Cursor="SizeNWSE" PreviewMouseLeftButtonDown="Resize_MouseDown" Tag="8" />
     </Grid>
 </Window>
