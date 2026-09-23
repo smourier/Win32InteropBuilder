@@ -282,6 +282,8 @@ namespace Win32InteropBuilder.Model
 #pragma warning restore CS8605 // Unboxing a possibly null value.
         }
 
+        public static string ToConstructorArguments(this Guid guid) => guid.ToString("X").Replace("{", string.Empty).Replace("}", string.Empty).Replace(",", ", ");
+
         public static bool IsNativeTypedef(this MetadataReader reader, TypeDefinition type) => type.GetCustomAttributes().Any(h => reader.GetFullName(reader.GetCustomAttribute(h)) == FullName.NativeTypedefAttribute);
         public static bool IsHandle(this MetadataReader reader, TypeDefinition type, SignatureTypeProvider signatureTypeProvider)
         {

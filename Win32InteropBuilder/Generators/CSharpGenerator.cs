@@ -71,7 +71,7 @@ namespace Win32InteropBuilder.Generators
                 return "null";
 
             if (value is Guid guid)
-                return $"new(\"{guid}\")";
+                return $"new({guid.ToConstructorArguments()})";
 
             if (value is bool b)
                 return b ? "true" : "false";
@@ -300,14 +300,21 @@ namespace Win32InteropBuilder.Generators
                     }
 
                     var mapped = context.MapType(field.TypeFullName);
-                    if (mapped.UnmanagedType.HasValue)
-                    {
-                        context.CurrentWriter.WriteLine($"[MarshalAs(UnmanagedType.{mapped.UnmanagedType.Value})]");
-                    }
-
-                    var constText = field.Attributes.HasFlag(FieldAttributes.Literal) && context.IsConstableType(field.TypeFullName) ? "const" : "static readonly";
+                    var typeName = GetTypeReferenceName(mapped.GetGeneratedName(context));
                     var vas = GetValueAsString(context, context.AllTypes[field.TypeFullName], field.GetDefaultValue(context));
-                    context.CurrentWriter.WriteLine($"public {constText} {GetTypeReferenceName(mapped.GetGeneratedName(context))} {GetIdentifier(field.Name)} = {vas};");
+                    if (field.Attributes.HasFlag(FieldAttributes.Literal) && context.IsConstableType(field.TypeFullName))
+                    {
+                        if (mapped.UnmanagedType.HasValue)
+                        {
+                            context.CurrentWriter.WriteLine($"[MarshalAs(UnmanagedType.{mapped.UnmanagedType.Value})]");
+                        }
+
+                        context.CurrentWriter.WriteLine($"public const {typeName} {GetIdentifier(field.Name)} = {vas};");
+                    }
+                    else
+                    {
+                        context.CurrentWriter.WriteLine($"public static {typeName} {GetIdentifier(field.Name)} => {vas};");
+                    }
 
                     if (i != type.Fields.Count - 1 || type.Methods.Count > 0)
                     {
