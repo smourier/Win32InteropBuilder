@@ -76,18 +76,23 @@ namespace Win32InteropBuilder.Model
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(context.MetadataReader);
-            var interfaces = type.GetInterfaceImplementations();
-            foreach (var iface in interfaces)
-            {
-                var fn = context.MetadataReader.GetFullName(iface);
-                if (fn == FullName.IUnknown || fn == FullName.IDispatch)
-                    return true;
+            return isIUnknownDerived(context.MetadataReader, type);
 
-                var typeDef = context.TypeDefinitions[fn];
-                if (IsIUnknownDerived(context, typeDef))
-                    return true;
+            bool isIUnknownDerived(MetadataReader reader, TypeDefinition type)
+            {
+                var interfaces = type.GetInterfaceImplementations();
+                foreach (var iface in interfaces)
+                {
+                    var fn = reader.GetFullName(iface);
+                    if (fn == FullName.IUnknown || fn == FullName.IDispatch)
+                        return true;
+
+                    var typeDef = context.TypeDefinitions[fn];
+                    if (isIUnknownDerived(typeDef.Reader, typeDef.Definition))
+                        return true;
+                }
+                return false;
             }
-            return false;
         }
 
         public static string? RemoveWhitespaces(this string? str)

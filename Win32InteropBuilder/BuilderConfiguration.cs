@@ -11,7 +11,7 @@ namespace Win32InteropBuilder
     {
         public virtual string? BuilderTypeFilePath { get; set; }
         public virtual string? BuilderTypeName { get; set; }
-        public virtual string? WinMdPath { get; set; }
+        public virtual IList<string> WinMdPaths { get; set; } = [];
         public virtual string? OutputDirectoryPath { get; set; }
         public virtual string? PatchesFilePath { get; set; } = "Patches.json";
         public virtual BuilderPatches? Patches { get; set; }

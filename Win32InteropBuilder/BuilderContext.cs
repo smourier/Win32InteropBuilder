@@ -30,10 +30,10 @@ namespace Win32InteropBuilder
         public virtual ILogger? Logger { get; set; }
         public virtual SignatureTypeProvider SignatureTypeProvider { get; }
         public virtual CustomAttributeTypeProvider CustomAttributeTypeProvider { get; }
-        public virtual MetadataReader? MetadataReader { get; set; }
+        public virtual IList<MetadataReader> MetadataReaders { get; } = [];
         public virtual HashSet<FullName> TypesToBuild { get; } = [];
         public virtual IDictionary<FullName, BuilderType> AllTypes { get; } = new Dictionary<FullName, BuilderType>();
-        public virtual IDictionary<FullName, TypeDefinition> TypeDefinitions { get; } = new Dictionary<FullName, TypeDefinition>();
+        public virtual IDictionary<FullName, BuilderTypeDefinition> TypeDefinitions { get; } = new Dictionary<FullName, BuilderTypeDefinition>();
         public virtual IDictionary<FullName, BuilderType> MappedTypes { get; } = new Dictionary<FullName, BuilderType>();
         public virtual ISet<string> ImplicitNamespaces { get; } = new HashSet<string>();
         public virtual ISet<BuilderType> TypesWithFunctions { get; } = new HashSet<BuilderType>();
@@ -44,6 +44,9 @@ namespace Win32InteropBuilder
         public virtual IndentedTextWriter? CurrentWriter { get; set; }
         public virtual string? CurrentNamespace { get; set; }
         public virtual Stack<BuilderType> CurrentTypes { get; } = [];
+
+        // the reader of the winmd that defines the type being processed.
+        public virtual MetadataReader? MetadataReader { get; set; }
 
         public virtual BuilderType CreateBuilderType(FullName fullName) => new(fullName);
         public virtual InterfaceType CreateInterfaceType(FullName fullName) => new(fullName);
@@ -121,16 +124,22 @@ namespace Win32InteropBuilder
         {
             ArgumentNullException.ThrowIfNull(typeFullName);
             typeFullName = typeFullName.NoPointerFullName;
-            if (MetadataReader == null)
-                throw new InvalidOperationException();
-
             if (!TypeDefinitions.TryGetValue(typeFullName, out var typeDef))
                 return;
 
             if (TypesToBuild.Contains(typeFullName))
                 return;
 
-            AllTypes[typeFullName].ResolveType(this, typeDef);
+            var reader = MetadataReader;
+            MetadataReader = typeDef.Reader;
+            try
+            {
+                AllTypes[typeFullName].ResolveType(this, typeDef.Definition);
+            }
+            finally
+            {
+                MetadataReader = reader;
+            }
         }
 
         public virtual BuilderType MapType(FullName typeFullName)

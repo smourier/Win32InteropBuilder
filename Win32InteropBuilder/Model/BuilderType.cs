@@ -581,7 +581,13 @@ namespace Win32InteropBuilder.Model
         public object? GetValue(BuilderContext context, byte[]? bytes)
         {
             ArgumentNullException.ThrowIfNull(context);
-            if (bytes == null || bytes.Length == 0)
+            if (bytes == null)
+                return null;
+
+            if (FullName == WellKnownTypes.SystemString.FullName)
+                return Encoding.Unicode.GetString(bytes);
+
+            if (bytes.Length == 0)
                 return null;
 
             if (bytes.Length == 4 && FullName == WellKnownTypes.SystemInt32.FullName)
@@ -613,9 +619,6 @@ namespace Win32InteropBuilder.Model
 
             if (bytes.Length == 8 && FullName == WellKnownTypes.SystemDouble.FullName)
                 return BitConverter.ToDouble(bytes, 0);
-
-            if (FullName == WellKnownTypes.SystemString.FullName)
-                return Encoding.Unicode.GetString(bytes);
 
             if (FullName == WellKnownTypes.SystemChar.FullName)
                 return BitConverter.ToChar(bytes, 0);

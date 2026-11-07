@@ -22,10 +22,10 @@ namespace Win32InteropBuilder
             Converters = { new EncodingConverter(), new JsonStringEnumConverter() }
         };
 
-        public static void Run(string configurationPath, string winMdPath)
+        public static void Run(string configurationPath, params IEnumerable<string> winMdPaths)
         {
             ArgumentNullException.ThrowIfNull(configurationPath);
-            ArgumentNullException.ThrowIfNull(winMdPath);
+            ArgumentNullException.ThrowIfNull(winMdPaths);
 
             BuilderConfiguration? configuration;
             try
@@ -52,7 +52,11 @@ namespace Win32InteropBuilder
             configuration.Generator ??= new BuilderConfiguration.GeneratorConfiguration();
             configuration.Generator.TypeName ??= typeof(CSharpGenerator).AssemblyQualifiedName!;
             configuration.BuilderTypeName ??= typeof(Builder).AssemblyQualifiedName!;
-            configuration.WinMdPath ??= winMdPath;
+            if (configuration.WinMdPaths.Count == 0)
+            {
+                configuration.WinMdPaths.AddRange(winMdPaths);
+            }
+
             configuration.OutputDirectoryPath ??= Path.Combine(Path.GetDirectoryName(configurationPath).Nullify() ?? Path.GetFullPath("."), Path.GetFileNameWithoutExtension(configurationPath));
 
             var builderType = Type.GetType(configuration.BuilderTypeName, true)!;
@@ -92,7 +96,11 @@ namespace Win32InteropBuilder
             var context = builder.CreateBuilderContext(configuration, generator);
             context.Logger = new ConsoleLogger();
             context.LogInfo($"Builder type name: {builder.GetType().FullName}");
-            context.LogInfo($"WinMd path: {configuration.WinMdPath}");
+            foreach (var path in configuration.WinMdPaths)
+            {
+                context.LogInfo($"WinMd path: {path}");
+            }
+
             context.LogInfo($"Architecture: {configuration.Architecture}");
             context.LogInfo($"Generator: {generator.Name}");
             context.LogInfo($"Output path: {configuration.OutputDirectoryPath}");
@@ -107,21 +115,37 @@ namespace Win32InteropBuilder
         public virtual void Build(BuilderContext context)
         {
             ArgumentNullException.ThrowIfNull(context);
-            if (context.Configuration.WinMdPath == null)
+            if (context.Configuration.WinMdPaths.Count == 0)
                 throw new ArgumentException(null, nameof(context));
 
             var arch = context.Configuration.Architecture;
             if (arch != Model.Architecture.X86 & arch != Model.Architecture.X64 && arch != Model.Architecture.Arm64)
                 throw new EnumBasedException<Win32InteropBuilderExceptionCode>(Win32InteropBuilderExceptionCode.UnsupportedArchitecture, $"Architecture: {arch}");
 
-            using var stream = File.OpenRead(context.Configuration.WinMdPath);
-            using var pe = new PEReader(stream);
-            context.MetadataReader = pe.GetMetadataReader();
-            GatherTypes(context);
-            RunGlobalPatches(context);
-            if (context.Configuration.GenerateFiles)
+            // a reader reads from its PE image, so every image stays open until generation is done.
+            var peReaders = new List<PEReader>();
+            try
             {
-                GenerateTypes(context);
+                foreach (var path in context.Configuration.WinMdPaths)
+                {
+                    var pe = new PEReader(File.OpenRead(path));
+                    peReaders.Add(pe);
+                    context.MetadataReaders.Add(pe.GetMetadataReader());
+                }
+
+                GatherTypes(context);
+                RunGlobalPatches(context);
+                if (context.Configuration.GenerateFiles)
+                {
+                    GenerateTypes(context);
+                }
+            }
+            finally
+            {
+                foreach (var pe in peReaders)
+                {
+                    pe.Dispose();
+                }
             }
         }
 
@@ -208,7 +232,6 @@ namespace Win32InteropBuilder
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(context.Configuration);
-            ArgumentNullException.ThrowIfNull(context.MetadataReader);
 
             AddWellKnownTypes(context);
             var includes = new HashSet<BuilderType>();
@@ -217,98 +240,104 @@ namespace Win32InteropBuilder
             var includedByTypes = new HashSet<BuilderType>();
             var excludedByTypes = new HashSet<BuilderType>();
 
-            foreach (var typeDef in context.MetadataReader.TypeDefinitions.Select(context.MetadataReader.GetTypeDefinition))
+            foreach (var reader in context.MetadataReaders)
             {
-                var type = context.CreateBuilderType(typeDef);
-                if (type == null)
-                    continue;
-
-                IncludeTypeFromMetadata(context, type);
-                type.IsNested = typeDef.IsNested;
-                context.CurrentTypes.Push(type);
-
-                try
+                context.MetadataReader = reader;
+                foreach (var typeDef in reader.TypeDefinitions.Select(reader.GetTypeDefinition))
                 {
-                    context.AllTypes[type.FullName] = type;
-                    context.TypeDefinitions[type.FullName] = typeDef;
+                    var type = context.CreateBuilderType(typeDef);
+                    if (type == null)
+                        continue;
 
-                    // we consider members add/remove only for non-enum non-structure non-interface non-delegate types
-                    if (type.GetType() == typeof(BuilderType) && context.Configuration.MemberInputs.Count > 0)
+                    IncludeTypeFromMetadata(context, type);
+                    type.IsNested = typeDef.IsNested;
+                    context.CurrentTypes.Push(type);
+
+                    try
                     {
-                        foreach (var methodHandle in typeDef.GetMethods())
-                        {
-                            var methodDef = context.MetadataReader.GetMethodDefinition(methodHandle);
-                            var method = context.CreateBuilderMethod(context.MetadataReader.GetString(methodDef.Name));
-                            if (method == null)
-                                continue;
+                        context.AllTypes[type.FullName] = type;
+                        context.TypeDefinitions[type.FullName] = new BuilderTypeDefinition(reader, typeDef);
 
-                            method.Handle = methodHandle;
-                            foreach (var match in context.Configuration.MemberInputs.Where(x => x.Matches(method)))
+                        // we consider members add/remove only for non-enum non-structure non-interface non-delegate types
+                        if (type.GetType() == typeof(BuilderType) && context.Configuration.MemberInputs.Count > 0)
+                        {
+                            foreach (var methodHandle in typeDef.GetMethods())
                             {
-                                match.MatchesCount++;
-                                includedByMembers.Add(type);
-                                if (match.IsReverse)
+                                var methodDef = context.MetadataReader.GetMethodDefinition(methodHandle);
+                                var method = context.CreateBuilderMethod(context.MetadataReader.GetString(methodDef.Name));
+                                if (method == null)
+                                    continue;
+
+                                method.Handle = methodHandle;
+                                foreach (var match in context.Configuration.MemberInputs.Where(x => x.Matches(method)))
                                 {
-                                    type.ExcludedMethods.Add(methodHandle);
+                                    match.MatchesCount++;
+                                    includedByMembers.Add(type);
+                                    if (match.IsReverse)
+                                    {
+                                        type.ExcludedMethods.Add(methodHandle);
+                                    }
+                                    else
+                                    {
+                                        type.IncludedMethods.Add(methodHandle);
+                                    }
                                 }
-                                else
+                            }
+
+                            foreach (var fieldHandle in typeDef.GetFields())
+                            {
+                                var fieldDef = context.MetadataReader.GetFieldDefinition(fieldHandle);
+                                var field = context.CreateBuilderField(context.MetadataReader.GetString(fieldDef.Name));
+                                if (field == null)
+                                    continue;
+
+                                field.Handle = fieldHandle;
+                                foreach (var match in context.Configuration.MemberInputs.Where(x => x.Matches(field)))
                                 {
-                                    type.IncludedMethods.Add(methodHandle);
+                                    match.MatchesCount++;
+                                    includedByMembers.Add(type);
+                                    if (match.IsReverse)
+                                    {
+                                        type.ExcludedFields.Add(fieldHandle);
+                                    }
+                                    else
+                                    {
+                                        type.IncludedFields.Add(fieldHandle);
+                                    }
                                 }
                             }
                         }
 
-                        foreach (var fieldHandle in typeDef.GetFields())
+                        foreach (var match in context.Configuration.TypeInputs.Where(x => x.Matches(type)))
                         {
-                            var fieldDef = context.MetadataReader.GetFieldDefinition(fieldHandle);
-                            var field = context.CreateBuilderField(context.MetadataReader.GetString(fieldDef.Name));
-                            if (field == null)
-                                continue;
-
-                            field.Handle = fieldHandle;
-                            foreach (var match in context.Configuration.MemberInputs.Where(x => x.Matches(field)))
+                            if (match.IsReverse)
                             {
-                                match.MatchesCount++;
-                                includedByMembers.Add(type);
-                                if (match.IsReverse)
-                                {
-                                    type.ExcludedFields.Add(fieldHandle);
-                                }
-                                else
-                                {
-                                    type.IncludedFields.Add(fieldHandle);
-                                }
+                                excludes.Add(type);
+                                includes.Remove(type);
+                                excludedByTypes.Add(type);
+                            }
+                            else
+                            {
+                                includes.Add(type);
+                                excludes.Remove(type);
+                                includedByTypes.Add(type);
+                            }
+
+                            if (match.Exclude)
+                            {
+                                type.IsGenerated = false;
                             }
                         }
                     }
-
-                    foreach (var match in context.Configuration.TypeInputs.Where(x => x.Matches(type)))
+                    finally
                     {
-                        if (match.IsReverse)
-                        {
-                            excludes.Add(type);
-                            includes.Remove(type);
-                            excludedByTypes.Add(type);
-                        }
-                        else
-                        {
-                            includes.Add(type);
-                            excludes.Remove(type);
-                            includedByTypes.Add(type);
-                        }
-
-                        if (match.Exclude)
-                        {
-                            type.IsGenerated = false;
-                        }
+                        if (context.CurrentTypes.Pop() != type)
+                            throw new InvalidOperationException();
                     }
-                }
-                finally
-                {
-                    if (context.CurrentTypes.Pop() != type)
-                        throw new InvalidOperationException();
                 }
             }
+
+            context.MetadataReader = null;
 
             foreach (var match in excludes.ToArray())
             {
@@ -368,7 +397,6 @@ namespace Win32InteropBuilder
         protected virtual void RemoveHandleTypes(BuilderContext context)
         {
             ArgumentNullException.ThrowIfNull(context);
-            ArgumentNullException.ThrowIfNull(context.MetadataReader);
             foreach (var type in context.TypesToBuild.ToArray().Where(t => context.AllTypes[t].IsHandle))
             {
                 context.TypesToBuild.Remove(type);
@@ -396,7 +424,6 @@ namespace Win32InteropBuilder
         protected virtual void GenerateTypes(BuilderContext context)
         {
             ArgumentNullException.ThrowIfNull(context);
-            ArgumentNullException.ThrowIfNull(context.MetadataReader);
             ArgumentNullException.ThrowIfNull(context.Configuration);
             ArgumentNullException.ThrowIfNull(context.Configuration.Generation);
             ArgumentNullException.ThrowIfNull(context.Configuration.OutputDirectoryPath);
